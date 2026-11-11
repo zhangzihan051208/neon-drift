@@ -21,50 +21,42 @@ namespace NeonDrift
 
         public static int Order(float worldY) => 1000 - Mathf.RoundToInt(worldY * 20f);
 
-        static Texture2D white;
-
-        /// <summary>用任意凸多边形生成一个纯色精灵（世界坐标）。</summary>
-        public static SpriteRenderer Poly(Transform parent, string name, Vector2[] pts, Color color, int order)
+        /// <summary>用任意凸多边形生成一块纯色网格（世界坐标）。用网格而不是精灵，因为运行时生成的精灵不允许改形状。</summary>
+        public static MeshRenderer Poly(Transform parent, string name, Vector2[] pts, Color color, int order)
         {
-            if (white == null)
-            {
-                white = new Texture2D(4, 4, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
-                var px = new Color32[16];
-                for (int i = 0; i < 16; i++) px[i] = new Color32(255, 255, 255, 255);
-                white.SetPixels32(px);
-                white.Apply();
-            }
-            Vector2 min = pts[0], max = pts[0];
-            foreach (var p in pts) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-            float size = Mathf.Max(max.x - min.x, max.y - min.y, 0.01f);
-            float ppu = 4f / size;
-            var sprite = Sprite.Create(white, new Rect(0, 0, 4, 4), Vector2.zero, ppu, 0, SpriteMeshType.FullRect);
-            var verts = new Vector2[pts.Length];
+            Vector2 min = pts[0];
+            foreach (var p in pts) min = Vector2.Min(min, p);
+            var verts = new Vector3[pts.Length];
+            var cols = new Color[pts.Length];
+            var uvs = new Vector2[pts.Length];
             for (int i = 0; i < pts.Length; i++)
             {
-                var v = (pts[i] - min) * ppu;
-                verts[i] = new Vector2(Mathf.Clamp(v.x, 0f, 4f), Mathf.Clamp(v.y, 0f, 4f));
+                verts[i] = pts[i] - min;
+                cols[i] = color;
+                uvs[i] = new Vector2(0.5f, 0.5f);
             }
-            var tris = new ushort[(pts.Length - 2) * 3];
+            var tris = new int[(pts.Length - 2) * 3];
             for (int i = 0; i < pts.Length - 2; i++)
             {
-                tris[i * 3] = 0; tris[i * 3 + 1] = (ushort)(i + 1); tris[i * 3 + 2] = (ushort)(i + 2);
+                tris[i * 3] = 0; tris[i * 3 + 1] = i + 2; tris[i * 3 + 2] = i + 1;
             }
-            sprite.OverrideGeometry(verts, tris);
+            var mesh = new Mesh { name = name, vertices = verts, colors = cols, uv = uvs, triangles = tris };
+            mesh.RecalculateBounds();
 
             var go = new GameObject(name);
             go.transform.position = min;
             if (parent != null) go.transform.SetParent(parent, true);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sharedMaterial = Sprites.Unlit;
-            sr.color = color;
-            sr.sortingOrder = order;
-            return sr;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = Sprites.Unlit;
+            mr.sortingOrder = order;
+            mr.shadowCastingMode = ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            return mr;
         }
 
         /// <summary>立在格子线上的一片竖直面（墙、闸门、护栏）。a、b 是底边两端的格子坐标。</summary>
-        public static SpriteRenderer Face(Transform parent, string name, Vector2 a, Vector2 b, float height, Color color, int order, float z0 = 0f)
+        public static MeshRenderer Face(Transform parent, string name, Vector2 a, Vector2 b, float height, Color color, int order, float z0 = 0f)
         {
             Vector2 p0 = W(a.x, a.y) + Vector2.up * z0, p1 = W(b.x, b.y) + Vector2.up * z0, up = Vector2.up * height;
             return Poly(parent, name, new[] { p0, p1, p1 + up, p0 + up }, color, order);

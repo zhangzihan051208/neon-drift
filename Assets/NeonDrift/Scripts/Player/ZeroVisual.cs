@@ -109,7 +109,7 @@ namespace NeonDrift
                 {
                     if (mode != loco) { loco = mode; locoTime = 0f; }
                     else locoTime += Time.deltaTime;
-                    if (mode == 2) sprite = sprint[Mathf.FloorToInt(locoTime * 14f) % sprint.Length];
+                    if (mode == 2) sprite = this.sprint[Mathf.FloorToInt(locoTime * 14f) % this.sprint.Length];
                     else if (mode == 1) sprite = walk[Mathf.FloorToInt(locoTime * 10f) % walk.Length];
                     else sprite = idle;
                     flip = facing == PlayerController.Dir.Right;
