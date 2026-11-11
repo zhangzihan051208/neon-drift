@@ -4,141 +4,222 @@ using UnityEngine;
 
 namespace NeonDrift
 {
+    public enum Side { None, NE, NW }   // NE：沿 y 最小的那条边（往右上走）；NW：沿 x 最小的那条边（往左上走）
+
     /// <summary>
-    /// 灰盒房间：生成墙、掩体、积水（装饰），按波次刷怪；清完后开门并给三选一奖励。
-    /// 1 格 = 1 单位 = 32 像素。标准房间 30×17 格正好一屏。
+    /// 一个街区：菱形场地 + 后方两面墙 + 前方护栏 + 掩体 + 波次刷怪。
+    /// 玩家走进来后入口和出口被闸门封住，清完敌人后出口打开。
     /// </summary>
     public class RoomDirector : MonoBehaviour
     {
-        public Rect Bounds { get; private set; }
+        public const int GateWidth = 3;
+
         public int Wave { get; private set; }
         public int WaveCount { get; private set; }
         public int Alive { get; private set; }
         public bool Cleared { get; private set; }
+        public bool Started { get; private set; }
+        public int Index { get; private set; }
+        public bool IsLast { get; private set; }
 
-        int index, w, h;
+        // 街区在全局格子坐标里的范围，以及出入口
+        public int bx, by, gx, gy;
+        public Side exitSide; public int exitAt;        // 出口在后墙上的起始格
+        public Side entrySide; public int entryAt;      // 入口在前沿上的起始格（NE 进来的入口在 y 最大的边，NW 进来的在 x 最大的边）
+
         PlayerController player;
-        SpriteRenderer door;
-        Collider2D doorCol;
+        GameObject exitGate, entryGate;
         readonly List<Rect> blocked = new List<Rect>();
 
-        static readonly Vector2Int[] Sizes = { new Vector2Int(30, 17), new Vector2Int(40, 22), new Vector2Int(34, 20) };
-
         static readonly Color FloorCol = Sprites.Hex("1c2024");
+        static readonly Color StripeCol = new Color(1f, 1f, 1f, 0.025f);
         static readonly Color WallCol = Sprites.Hex("2e3236");
-        static readonly Color WallTop = Sprites.Hex("464b50");
-        static readonly Color WaterCol = Sprites.Hex("10182a");
+        static readonly Color WallTop = Sprites.Hex("4a5056");
+        static readonly Color RailCol = Sprites.Hex("4a5458");
+        static readonly Color WaterCol = Sprites.Hex("0d1424");
+        const float WallH = 1.7f;
 
-        public static RoomDirector Build(int index, PlayerController player)
+        public static RoomDirector Build(Transform parent, int index, bool isLast, int bx, int by, int gx, int gy,
+                                         Side entrySide, int entryAt, Side exitSide, int exitAt, PlayerController player, System.Random rng)
         {
-            var go = new GameObject($"Room {index}");
+            var go = new GameObject($"Block {index}");
+            go.transform.SetParent(parent, false);
             var rd = go.AddComponent<RoomDirector>();
-            rd.index = index;
-            rd.player = player;
-            var s = Sizes[(index - 1) % Sizes.Length];
-            rd.w = s.x; rd.h = s.y;
-            rd.Bounds = new Rect(0, 0, rd.w, rd.h);
-            rd.Generate();
+            rd.Index = index; rd.IsLast = isLast; rd.player = player;
+            rd.bx = bx; rd.by = by; rd.gx = gx; rd.gy = gy;
+            rd.entrySide = entrySide; rd.entryAt = entryAt; rd.exitSide = exitSide; rd.exitAt = exitAt;
+            rd.Generate(rng);
             return rd;
         }
 
-        void Generate()
+        void Generate(System.Random rng)
         {
-            var rng = new System.Random(index * 7919 + System.Environment.TickCount);
+            int x0 = bx, y0 = by, x1 = bx + gx, y1 = by + gy;
+            var t = transform;
 
-            // 地板（平铺格子，方便看清尺寸）
-            var floor = Sprites.Make(transform, "Floor", Sprites.FloorTile(), FloorCol, -30000, Vector2.zero);
-            floor.drawMode = SpriteDrawMode.Tiled;
-            floor.size = new Vector2(w, h);
-
-            // 积水（装饰，机制在下一步加入）
+            // 地面 + 条纹（方便看清格子大小）
+            Iso.Poly(t, "Floor", new[] { Iso.W(x0, y0), Iso.W(x1, y0), Iso.W(x1, y1), Iso.W(x0, y1) }, FloorCol, -30000);
+            for (int j = y0; j < y1; j += 2)
+                Iso.Poly(t, "Stripe", new[] { Iso.W(x0, j), Iso.W(x1, j), Iso.W(x1, j + 1), Iso.W(x0, j + 1) }, StripeCol, -29990);
+            for (int i = x0; i < x1; i += 2)
+                Iso.Poly(t, "Stripe", new[] { Iso.W(i, y0), Iso.W(i + 1, y0), Iso.W(i + 1, y1), Iso.W(i, y1) }, StripeCol, -29990);
+            // 人行道
+            Iso.Poly(t, "Walk", new[] { Iso.W(x0, y0), Iso.W(x1, y0), Iso.W(x1, y0 + 1.5f), Iso.W(x0, y0 + 1.5f) }, new Color(1, 1, 1, 0.05f), -29980);
+            Iso.Poly(t, "Walk", new[] { Iso.W(x0, y0), Iso.W(x0 + 1.5f, y0), Iso.W(x0 + 1.5f, y1), Iso.W(x0, y1) }, new Color(1, 1, 1, 0.05f), -29980);
+            // 积水（装饰）
             for (int i = 0; i < 3; i++)
             {
-                float px = 5 + (float)rng.NextDouble() * (w - 10), py = 3 + (float)rng.NextDouble() * (h - 7);
-                var pud = Sprites.Make(transform, "Puddle", Sprites.Circle(64), WaterCol, -29000, new Vector2(px, py));
-                pud.transform.localScale = new Vector3(1.6f + (float)rng.NextDouble() * 1.4f, 0.7f + (float)rng.NextDouble() * 0.5f, 1f);
+                var c = Iso.W(x0 + 3 + (float)rng.NextDouble() * (gx - 6), y0 + 3 + (float)rng.NextDouble() * (gy - 6));
+                var pud = Sprites.Make(t, "Puddle", Sprites.Circle(64), WaterCol, -29970, c);
+                float s = 0.8f + (float)rng.NextDouble() * 0.8f;
+                pud.transform.localScale = new Vector3(s * 1.41f, s * 0.7f, 1f);
             }
 
-            // 外墙：上墙 2 格高（俯视角能看到墙面），其余 1 格
-            int doorY0 = h / 2 - 1, doorY1 = h / 2 + 2;
-            Wall(0, 0, w, 1);
-            Wall(0, h - 2, w, 2, face: true);
-            Wall(0, 1, 1, h - 3);
-            Wall(w - 1, 1, 1, doorY0 - 1);
-            Wall(w - 1, doorY1, 1, h - 2 - doorY1);
-            // 门（右墙中间 3 格）
-            door = Sprites.Make(transform, "Door", Sprites.Box(32, 96, feet: false), Sprites.Hex("e43b44"), 0, new Vector2(w - 0.5f, (doorY0 + doorY1) / 2f));
-            var dc = door.gameObject.AddComponent<BoxCollider2D>();
-            dc.size = new Vector2(1f, doorY1 - doorY0);
-            door.transform.localScale = new Vector3(1f, (doorY1 - doorY0) / 3f, 1f);
-            doorCol = dc;
+            var bounds = new GameObject("Bounds");
+            bounds.transform.SetParent(t, false);
 
-            // 掩体柱子
-            blocked.Add(new Rect(0, h / 2f - 3, 6, 6)); // 玩家出生区留空
-            int pillars = 3 + index % 3;
-            for (int i = 0, tries = 0; i < pillars && tries < 200; tries++)
+            // 后墙（NE：y = y0；NW：x = x0），出口处留缺口
+            for (int i = x0; i < x1; i++)
             {
-                int px = 4 + rng.Next(w - 8), py = 3 + rng.Next(h - 7);
-                var r = new Rect(px - 1, py - 1, 4, 4);
-                bool overlap = false;
-                foreach (var b in blocked) if (b.Overlaps(r)) { overlap = true; break; }
-                if (overlap) continue;
+                if (exitSide == Side.NE && i >= x0 + exitAt && i < x0 + exitAt + GateWidth) continue;
+                WallSeg(new Vector2(i, y0), new Vector2(i + 1, y0), (i - x0) % 5 == 2);
+            }
+            for (int j = y0; j < y1; j++)
+            {
+                if (exitSide == Side.NW && j >= y0 + exitAt && j < y0 + exitAt + GateWidth) continue;
+                WallSeg(new Vector2(x0, j + 1), new Vector2(x0, j), (j - y0) % 5 == 2);
+            }
+            EdgeWithGap(bounds, new Vector2(x0, y0), new Vector2(x1, y0), exitSide == Side.NE ? exitAt : -1);
+            EdgeWithGap(bounds, new Vector2(x0, y0), new Vector2(x0, y1), exitSide == Side.NW ? exitAt : -1);
+            // 前沿护栏（y = y1 和 x = x1），入口处留缺口
+            EdgeWithGap(bounds, new Vector2(x0, y1), new Vector2(x1, y1), entrySide == Side.NE ? entryAt : -1, rail: true);
+            EdgeWithGap(bounds, new Vector2(x1, y0), new Vector2(x1, y1), entrySide == Side.NW ? entryAt : -1, rail: true);
+
+            // 闸门
+            if (exitSide == Side.NE) exitGate = Gate(new Vector2(x0 + exitAt, y0), new Vector2(x0 + exitAt + GateWidth, y0), false);
+            if (exitSide == Side.NW) exitGate = Gate(new Vector2(x0, y0 + exitAt), new Vector2(x0, y0 + exitAt + GateWidth), false);
+            if (entrySide == Side.NE) entryGate = Gate(new Vector2(x0 + entryAt, y1), new Vector2(x0 + entryAt + GateWidth, y1), true);
+            if (entrySide == Side.NW) entryGate = Gate(new Vector2(x1, y0 + entryAt), new Vector2(x1, y0 + entryAt + GateWidth), true);
+            if (entryGate != null) entryGate.SetActive(false);
+
+            // 出入口前留空，不放掩体
+            if (exitSide == Side.NE) blocked.Add(new Rect(x0 + exitAt - 1, y0, GateWidth + 2, 4));
+            if (exitSide == Side.NW) blocked.Add(new Rect(x0, y0 + exitAt - 1, 4, GateWidth + 2));
+            if (entrySide == Side.NE) blocked.Add(new Rect(x0 + entryAt - 1, y1 - 5, GateWidth + 2, 5));
+            if (entrySide == Side.NW) blocked.Add(new Rect(x1 - 5, y0 + entryAt - 1, 5, GateWidth + 2));
+            if (entrySide == Side.None) blocked.Add(new Rect(x0, y1 - 6, 6, 6));           // 出生点
+            int covers = 3 + rng.Next(3);
+            for (int i = 0, tries = 0; i < covers && tries < 200; tries++)
+            {
+                int w = 1 + rng.Next(2), h = 1 + rng.Next(2);
+                int cx = x0 + 2 + rng.Next(Mathf.Max(1, gx - 4 - w)), cy = y0 + 2 + rng.Next(Mathf.Max(1, gy - 4 - h));
+                var r = new Rect(cx - 1, cy - 1, w + 2, h + 2);
+                bool hit = false;
+                foreach (var b in blocked) if (b.Overlaps(r)) { hit = true; break; }
+                if (hit) continue;
                 blocked.Add(r);
-                Wall(px, py, 2, 2, face: true);
+                Iso.Box(t, "Cover", cx, cy, cx + w, cy + h, 0.5f + (float)rng.NextDouble() * 0.5f, Sprites.Hex(rng.Next(2) == 0 ? "3a3e42" : "4a3a2a"));
                 i++;
             }
 
-            // 玩家位置
-            player.transform.position = new Vector2(2.5f, h / 2f);
-            player.GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
-
-            WaveCount = Mathf.Min(4, 2 + (index - 1) / 2);
-            StartCoroutine(RunWaves());
-            GreyboxHUD.Message(index == 1 ? "WASD 移动 · 按住 Shift 疾跑 · 鼠标瞄准 · 左键射击 · 空格闪移\n子弹能在墙上反弹一次" : $"房间 {index}", 3f);
+            WaveCount = Mathf.Min(4, 2 + (Index - 1) / 2);
         }
 
-        void Wall(float x, float y, float ww, float hh, bool face = false)
+        void WallSeg(Vector2 a, Vector2 b, bool lit)
         {
-            var go = new GameObject("Wall");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector2(x + ww / 2f, y + hh / 2f);
-            var col = go.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(ww, hh);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Sprites.Box(32, 32);
-            sr.sharedMaterial = Sprites.Unlit;
-            sr.drawMode = SpriteDrawMode.Sliced;
-            sr.size = new Vector2(ww, hh);
-            sr.color = WallCol;
-            sr.sortingOrder = 1000 - Mathf.RoundToInt(y * 20f);
-            if (face)
+            float topY = Mathf.Max(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y);
+            int order = Iso.Order(topY + 0.05f);
+            Iso.Face(transform, "Wall", a, b, WallH, WallCol, order);
+            Iso.Face(transform, "WallTop", a, b, 0.12f, WallTop, order + 1, WallH - 0.12f);
+            if (lit)                                                              // 一扇亮着的窗，帮助判断方向
             {
-                // 顶面颜色更亮，模拟俯视角看到的墙顶
-                var top = Sprites.Make(go.transform, "Top", Sprites.Box(32, 32), WallTop, sr.sortingOrder + 1, new Vector2(0f, hh / 2f - 0.25f));
-                top.drawMode = SpriteDrawMode.Sliced;
-                top.size = new Vector2(ww, 0.5f);
+                Vector2 m0 = Vector2.Lerp(a, b, 0.25f), m1 = Vector2.Lerp(a, b, 0.75f);
+                var colors = new[] { "ffd99a", "ff9fd0", "9ad8ff", "c8ffd8" };
+                Iso.Face(transform, "Window", m0, m1, 0.5f, Sprites.Hex(colors[(int)(Mathf.Abs(a.x * 3 + a.y * 7)) % colors.Length]), order + 2, 0.75f);
             }
+        }
+
+        void EdgeWithGap(GameObject host, Vector2 a, Vector2 b, int gapAt, bool rail = false)
+        {
+            Vector2 dir = (b - a).normalized;
+            float len = (b - a).magnitude;
+            if (gapAt < 0) { Iso.Edge(host, a, b); if (rail) Rail(a, b); return; }
+            Vector2 g0 = a + dir * gapAt, g1 = a + dir * (gapAt + GateWidth);
+            if (gapAt > 0) { Iso.Edge(host, a, g0); if (rail) Rail(a, g0); }
+            if (gapAt + GateWidth < len) { Iso.Edge(host, g1, b); if (rail) Rail(g1, b); }
+        }
+
+        void Rail(Vector2 a, Vector2 b)
+        {
+            int n = Mathf.RoundToInt((b - a).magnitude);
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 p = Vector2.Lerp(a, b, i / (float)n), q = Vector2.Lerp(a, b, (i + 1) / (float)n);
+                float lowY = Mathf.Min(Iso.W(p.x, p.y).y, Iso.W(q.x, q.y).y);
+                Iso.Face(transform, "Rail", p, q, 0.06f, RailCol, Iso.Order(lowY - 0.05f), 0.3f);
+                Iso.Face(transform, "RailPost", p, Vector2.Lerp(p, q, 0.08f), 0.3f, RailCol, Iso.Order(lowY - 0.05f));
+            }
+        }
+
+        GameObject Gate(Vector2 a, Vector2 b, bool front)
+        {
+            var go = new GameObject(front ? "EntryGate" : "ExitGate");
+            go.transform.SetParent(transform, false);
+            Iso.Edge(go, a, b);
+            float y = front ? Mathf.Min(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y) - 0.05f : Mathf.Max(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y) + 0.05f;
+            var c = Sprites.Hex("e43b44"); c.a = 0.7f;
+            Iso.Face(go.transform, "Shutter", a, b, front ? 0.9f : WallH, c, Iso.Order(y));
+            return go;
+        }
+
+        public bool Contains(Vector2 world, float inset)
+        {
+            var tpos = Iso.Tile(world);
+            return tpos.x > bx + inset && tpos.x < bx + gx - inset && tpos.y > by + inset && tpos.y < by + gy - inset;
+        }
+
+        public Vector2 SpawnPoint => Iso.W(bx + 2.5f, by + gy - 2.5f);
+        public Vector2 Center => Iso.W(bx + gx / 2f, by + gy / 2f);
+
+        void Update()
+        {
+            if (Started || player == null || player.IsDead) return;
+            if (Contains((Vector2)player.transform.position + Vector2.up * 0.25f, 1.2f)) Begin();
+        }
+
+        void Begin()
+        {
+            Started = true;
+            if (entryGate != null) entryGate.SetActive(true);
+            GameRoot.I.EnterRoom(this);
+            StartCoroutine(RunWaves());
         }
 
         IEnumerator RunWaves()
         {
-            yield return new WaitForSeconds(1.0f);
-            var rng = new System.Random(index * 31 + System.Environment.TickCount);
+            yield return new WaitForSeconds(Index == 1 ? 1.2f : 0.5f);
+            var rng = new System.Random(Index * 31 + System.Environment.TickCount);
             for (Wave = 1; Wave <= WaveCount; Wave++)
             {
-                int n = 3 + index + (Wave - 1);
+                int n = 2 + Index + (Wave - 1);
                 var spots = new List<Vector2>();
                 for (int tries = 0; spots.Count < n && tries < 400; tries++)
                 {
-                    var p = new Vector2(2 + (float)rng.NextDouble() * (w - 4), 2 + (float)rng.NextDouble() * (h - 5));
-                    if (Vector2.Distance(p, player.transform.position) < 6f) continue;
-                    if (Physics2D.OverlapCircle(p + Vector2.up * 0.3f, 0.7f) != null) continue;
+                    float tx = bx + 1.5f + (float)rng.NextDouble() * (gx - 3), ty = by + 1.5f + (float)rng.NextDouble() * (gy - 3);
+                    Vector2 p = Iso.W(tx, ty);
+                    if (Vector2.Distance(p, player.transform.position) < 3.5f) continue;
+                    if (Physics2D.OverlapCircle(p + Vector2.up * 0.25f, 0.5f) != null) continue;
                     bool close = false;
-                    foreach (var s in spots) if (Vector2.Distance(s, p) < 1.5f) close = true;
+                    foreach (var s in spots) if (Vector2.Distance(s, p) < 1.2f) close = true;
                     if (!close) spots.Add(p);
                 }
                 var markers = new List<GameObject>();
-                foreach (var s in spots) markers.Add(Effects.SpawnMarker(s + Vector2.up * 0.2f, new Color(1f, 0.2f, 0.3f, 0.5f)));
+                foreach (var s in spots)
+                {
+                    var m = Effects.SpawnMarker(s, new Color(1f, 0.2f, 0.3f, 0.5f));
+                    m.transform.localScale = new Vector3(1f, 0.5f, 1f);
+                    markers.Add(m);
+                }
                 yield return new WaitForSeconds(0.7f);
                 foreach (var m in markers) Destroy(m);
                 foreach (var s in spots)
@@ -160,23 +241,16 @@ namespace NeonDrift
         {
             Cleared = true;
             Projectile.ClearAll();
-            door.color = Sprites.Hex("3effa0");
-            doorCol.enabled = false;
-            var c = new Vector2(w / 2f, h / 2f);
+            if (exitGate != null) exitGate.SetActive(false);
             var pool = new List<RewardType> { RewardType.FireRate, RewardType.Bounce, RewardType.MaxHp, RewardType.Damage };
             for (int i = 0; i < 3; i++)
             {
                 var r = pool[Random.Range(0, pool.Count)];
                 pool.Remove(r);
-                Pickup.Spawn(transform, c + new Vector2((i - 1) * 3f, 0f), r);
+                Pickup.Spawn(transform, Center + new Vector2((i - 1) * 2f, 0f), r);
             }
-            GreyboxHUD.Message("房间清理完毕：三选一奖励，然后走向右边的门", 4f);
-        }
-
-        void Update()
-        {
-            if (Cleared && player != null && !player.IsDead && player.transform.position.x > w - 0.6f)
-                GameRoot.I.NextRoom();
+            if (IsLast) GameRoot.I.OnRunComplete();
+            else GreyboxHUD.Message(exitSide == Side.NE ? "街区清理完毕：拿一个奖励，出口在右上方" : "街区清理完毕：拿一个奖励，出口在左上方", 4f);
         }
     }
 }

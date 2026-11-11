@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace NeonDrift
 {
     /// <summary>
-    /// 灰盒原型的入口。点 Play 后自动生成：摄像机设置、玩家、房间、HUD。
+    /// 灰盒原型的入口。点 Play 后自动生成：摄像机设置、玩家、由街区拼成的世界、HUD。
     /// 场景里放一个 NoBootstrap 组件可以关掉它（以后做正式场景时用）。
     /// </summary>
     public class GameRoot : MonoBehaviour
@@ -16,6 +16,8 @@ namespace NeonDrift
         public RoomDirector Room { get; private set; }
         public int RoomIndex { get; private set; }
         public int Deaths { get; private set; }
+        public WorldBuilder World { get; private set; }
+        public bool RunComplete { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -36,26 +38,33 @@ namespace NeonDrift
 
         public void StartRun()
         {
-            if (Room != null) Destroy(Room.gameObject);
+            if (World != null) Destroy(World.gameObject);
             if (Player != null) Destroy(Player.gameObject);
             Projectile.ClearAll();
+            foreach (var p in Pickup.All.ToArray()) Destroy(p.gameObject);
+            RunComplete = false;
+            Room = null;
             RoomIndex = 1;
             Player = PlayerController.Spawn(Vector2.zero);
-            BuildRoom();
+            World = WorldBuilder.Build(Player);
+            Player.transform.position = World.Blocks[0].SpawnPoint;
+            // 整个世界是连续的，镜头只跟随，不再限制在单个房间里
+            CameraRig.I.SetTarget(Player.transform, new Rect(-10000f, -10000f, 20000f, 20000f));
+            GreyboxHUD.Message("WASD 移动 · 鼠标瞄准 · 左键射击 · 空格闪移\n清完一个街区后出口打开，一路往画面上方走", 4f);
         }
 
-        public void NextRoom()
+        /// <summary>玩家走进一个街区时由街区调用。</summary>
+        public void EnterRoom(RoomDirector room)
         {
-            RoomIndex++;
-            BuildRoom();
+            Room = room;
+            RoomIndex = room.Index;
+            if (room.Index > 1) GreyboxHUD.Message($"街区 {room.Index}", 2f);
         }
 
-        void BuildRoom()
+        public void OnRunComplete()
         {
-            if (Room != null) Destroy(Room.gameObject);
-            Projectile.ClearAll();
-            Room = RoomDirector.Build(RoomIndex, Player);
-            CameraRig.I.SetTarget(Player.transform, Room.Bounds);
+            RunComplete = true;
+            GreyboxHUD.Message("本局演示结束。按 R 重新生成一条新的路线", 999f);
         }
 
         public void OnPlayerDied()
@@ -69,7 +78,7 @@ namespace NeonDrift
             var kb = Keyboard.current;
             var gp = Gamepad.current;
             bool restart = (kb != null && kb.rKey.wasPressedThisFrame) || (gp != null && gp.startButton.wasPressedThisFrame);
-            if (restart && Player != null && Player.IsDead)
+            if (restart && Player != null && (Player.IsDead || RunComplete))
             {
                 GreyboxHUD.Message("", 0f);
                 StartRun();

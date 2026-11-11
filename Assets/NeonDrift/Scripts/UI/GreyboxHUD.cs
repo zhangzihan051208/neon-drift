@@ -53,7 +53,7 @@ namespace NeonDrift
             var room = root.Room;
             if (room != null)
             {
-                string info = room.Cleared ? $"房间 {root.RoomIndex} · 已清理" : $"房间 {root.RoomIndex} · 波次 {room.Wave}/{room.WaveCount} · 剩余 {room.Alive}";
+                string info = room.Cleared ? $"街区 {root.RoomIndex} · 已清理" : $"街区 {root.RoomIndex} · 波次 {room.Wave}/{room.WaveCount} · 剩余 {room.Alive}";
                 GUI.Label(new Rect(Screen.width - 260 * s, 10 * s, 250 * s, 20 * s), info, new GUIStyle(label) { alignment = TextAnchor.UpperRight });
             }
             GUI.Label(new Rect(Screen.width - 260 * s, 26 * s, 250 * s, 20 * s),

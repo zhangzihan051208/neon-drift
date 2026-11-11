@@ -17,6 +17,8 @@ namespace NeonDrift
         public float moveSpeed = 6.5f;
         public float sprintSpeed = 9.2f;
         public float acceleration = 70f;
+        [Tooltip("斜 45° 视角下，上下方向在屏幕上显得更短。1 = 不缩短")]
+        public float verticalScale = 0.7f;
 
         [Header("闪移")]
         public float dashSpeed = 20f;
@@ -223,7 +225,7 @@ namespace NeonDrift
                 return;
             }
             float speed = sprintHeld && move.sqrMagnitude > 0.01f ? sprintSpeed : moveSpeed;
-            rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, move * speed, acceleration * Time.fixedDeltaTime);
+            rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, new Vector2(move.x, move.y * verticalScale) * speed, acceleration * Time.fixedDeltaTime);
         }
 
         void UpdateFacingVisuals()
