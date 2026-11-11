@@ -94,7 +94,7 @@ namespace NeonDrift
 
             WaveCount = Mathf.Min(4, 2 + (index - 1) / 2);
             StartCoroutine(RunWaves());
-            GreyboxHUD.Message(index == 1 ? "WASD 移动 · 鼠标瞄准 · 左键射击 · 空格闪移\n子弹能在墙上反弹一次" : $"房间 {index}", 3f);
+            GreyboxHUD.Message(index == 1 ? "WASD 移动 · 按住 Shift 疾跑 · 鼠标瞄准 · 左键射击 · 空格闪移\n子弹能在墙上反弹一次" : $"房间 {index}", 3f);
         }
 
         void Wall(float x, float y, float ww, float hh, bool face = false)

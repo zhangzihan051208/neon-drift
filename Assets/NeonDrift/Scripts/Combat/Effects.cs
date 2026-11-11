@@ -27,6 +27,8 @@ namespace NeonDrift
         {
             var sr = Sprites.Make(null, "Afterimage", src.sprite, color, src.sortingOrder - 1, src.transform.position);
             sr.transform.localScale = src.transform.lossyScale;
+            sr.flipX = src.flipX;
+            sr.flipY = src.flipY;
             var f = sr.gameObject.AddComponent<Fader>();
             f.life = f.maxLife = 0.18f;
         }

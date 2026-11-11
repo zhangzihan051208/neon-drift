@@ -4,8 +4,9 @@ using UnityEngine.InputSystem;
 namespace NeonDrift
 {
     /// <summary>
-    /// 零（灰盒版）：四方向移动、鼠标/右摇杆瞄准、射击（动能枪·反弹）、闪移。
-    /// 所有手感参数都是公开字段，Play 模式下在 Inspector 里直接调，找到满意的数值后记下来。
+    /// 零：四方向移动、鼠标/右摇杆瞄准、射击（动能枪·反弹）、闪移。
+    /// 动作图加载成功时用像素身体；失败时退回红方块。
+    /// 手感参数都是公开字段，Play 模式下可以在 Inspector 里直接调。
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
@@ -14,6 +15,7 @@ namespace NeonDrift
 
         [Header("移动")]
         public float moveSpeed = 6.5f;
+        public float sprintSpeed = 9.2f;
         public float acceleration = 70f;
 
         [Header("闪移")]
@@ -48,11 +50,13 @@ namespace NeonDrift
 
         Rigidbody2D rb;
         Health hp;
-        SpriteRenderer body, visor;
+        SpriteRenderer body, visor, gunSr;
         Transform gun;
+        ZeroVisual visual;
         Vector2 move, dashDir;
         float dashT, dashCd, fireCd, lastShotTime = -9f, lastMouseMove = -9f;
         Vector2 lastMousePos;
+        bool sprintHeld, shotVisual;
 
         static readonly Color CoatRed = Sprites.Hex("b0202c");
 
@@ -83,25 +87,27 @@ namespace NeonDrift
             hurt.size = new Vector2(0.6f, 1.6f);
             hurt.offset = new Vector2(0f, 0.85f);
 
-            // 灰盒外观：红色身体（64 像素高 = 2 格）、青色面罩表示朝向、灰色枪
+            // 红方块是动作图加载失败时的退路。加载成功后换成 64 像素高的零，脚底仍在原点。
             body = Sprites.Make(transform, "Body", Sprites.Box(22, 60, feet: true), CoatRed, 0, Vector2.zero);
             visor = Sprites.Make(transform, "Facing", Sprites.Box(10, 4), Sprites.Hex("3ff2ff"), 1, new Vector2(0f, 1.55f));
-            var g = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.0f));
-            g.sprite = Sprites.Box(16, 5);
-            gun = g.transform;
+            gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.0f));
+            gun = gunSr.transform;
             gameObject.AddComponent<YSort>();
 
             hp = gameObject.AddComponent<Health>();
             hp.Init(Team.Player, maxHp, hurtIFrames: 0.9f);
+            visual = ZeroVisual.Attach(body, visor, gunSr, hp);
             hp.Damaged += (amt, dir) =>
             {
                 CameraRig.Shake(0.25f);
                 GameRoot.Hitstop(0.06f);
                 rb.linearVelocity += dir.normalized * 6f;
+                visual?.PlayHit(Facing);
             };
             hp.Died += () =>
             {
-                Effects.Burst(transform.position + Vector3.up * 0.8f, CoatRed);
+                var burst = visual != null && visual.Ready ? Sprites.Hex("d7dde6") : CoatRed;
+                Effects.Burst(transform.position + Vector3.up * 0.8f, burst);
                 foreach (var r in GetComponentsInChildren<SpriteRenderer>()) r.enabled = false;
                 rb.linearVelocity = Vector2.zero;
                 GameRoot.I?.OnPlayerDied();
@@ -134,6 +140,8 @@ namespace NeonDrift
             }
             if (gp != null && gp.leftStick.ReadValue().sqrMagnitude > 0.04f) m = gp.leftStick.ReadValue();
             move = m.sqrMagnitude > 1f ? m.normalized : m;
+            sprintHeld = (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed))
+                || (gp != null && gp.leftShoulder.isPressed);
 
             // 瞄准：鼠标 > 右摇杆 > 自动瞄准最近敌人
             Vector2 origin = (Vector2)transform.position + Vector2.up * 1.0f;
@@ -184,6 +192,7 @@ namespace NeonDrift
             Projectile.Spawn(muzzle, d, Team.Player, bulletSpeed, bulletDamage, bulletBounces, Sprites.Hex("ffb347"));
             Effects.Sparks(muzzle, Sprites.Hex("ffd27a"), 2, 2f);
             CameraRig.Shake(recoilShake);
+            shotVisual = true;
         }
 
         void StartDash()
@@ -200,7 +209,11 @@ namespace NeonDrift
             {
                 rb.linearVelocity = dashDir * dashSpeed;
                 dashT -= Time.fixedDeltaTime;
-                Effects.Afterimage(body, new Color(1f, 0.16f, 0.43f, 0.45f));
+                // 像素身体大部分是深色，染色会把白头发染掉、黑大衣隐掉。保留原色，只降低透明度。
+                var ghost = visual != null && visual.Ready
+                    ? new Color(1f, 1f, 1f, 0.55f)
+                    : new Color(1f, 0.16f, 0.43f, 0.45f);
+                Effects.Afterimage(body, ghost);
                 if (dashT <= 0f)
                 {
                     hp.invulnerable = false;
@@ -209,7 +222,8 @@ namespace NeonDrift
                 }
                 return;
             }
-            rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, move * moveSpeed, acceleration * Time.fixedDeltaTime);
+            float speed = sprintHeld && move.sqrMagnitude > 0.01f ? sprintSpeed : moveSpeed;
+            rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, move * speed, acceleration * Time.fixedDeltaTime);
         }
 
         void UpdateFacingVisuals()
@@ -218,13 +232,16 @@ namespace NeonDrift
             Vector2 f = Time.time - lastShotTime < 0.35f || move.sqrMagnitude < 0.01f ? AimDir : move;
             Facing = Mathf.Abs(f.x) > Mathf.Abs(f.y) ? (f.x > 0 ? Dir.Right : Dir.Left) : (f.y > 0 ? Dir.Up : Dir.Down);
 
-            // 面罩位置表示朝向；朝上时面罩藏到身后
-            switch (Facing)
+            // 像素外观自己表示朝向。动作图没加载到时，仍用青色面罩。
+            if ((visual == null || !visual.Ready) && visor != null)
             {
-                case Dir.Down: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = 1; break;
-                case Dir.Up: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = -1; break;
-                case Dir.Right: visor.transform.localPosition = new Vector2(0.22f, 1.55f); visor.sortingOrder = 1; break;
-                case Dir.Left: visor.transform.localPosition = new Vector2(-0.22f, 1.55f); visor.sortingOrder = 1; break;
+                switch (Facing)
+                {
+                    case Dir.Down: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = 1; break;
+                    case Dir.Up: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = -1; break;
+                    case Dir.Right: visor.transform.localPosition = new Vector2(0.22f, 1.55f); visor.sortingOrder = 1; break;
+                    case Dir.Left: visor.transform.localPosition = new Vector2(-0.22f, 1.55f); visor.sortingOrder = 1; break;
+                }
             }
 
             // 枪 360° 指向瞄准方向；朝上时画在身体后面
@@ -234,6 +251,10 @@ namespace NeonDrift
             var gsr = gun.GetComponent<SpriteRenderer>();
             gsr.sortingOrder = Facing == Dir.Up ? -2 : 2;
             gsr.flipY = AimDir.x < 0f;
+
+            visual?.Tick(Facing, move.sqrMagnitude > 0.01f, sprintHeld && move.sqrMagnitude > 0.01f,
+                IsDashing, dashDir, dashT, dashTime, shotVisual);
+            shotVisual = false;
         }
 
         // ---------------------------------------------------------------- 奖励
