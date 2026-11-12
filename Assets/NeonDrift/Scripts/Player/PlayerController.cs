@@ -82,7 +82,7 @@ namespace NeonDrift
 
             // 脚下的移动碰撞体 + 身体的受击判定框
             var feet = gameObject.AddComponent<CircleCollider2D>();
-            feet.radius = 0.3f;
+            feet.radius = 0.38f;          // 角色放大加宽了，脚下的碰撞也跟着大一点
             feet.offset = new Vector2(0f, 0.25f);
             var hurt = gameObject.AddComponent<BoxCollider2D>();
             hurt.isTrigger = true;
@@ -91,8 +91,8 @@ namespace NeonDrift
 
             // 红方块是动作图加载失败时的退路。加载成功后换成 64 像素高的零，脚底仍在原点。
             body = Sprites.Make(transform, "Body", Sprites.Box(22, 60, feet: true), CoatRed, 0, Vector2.zero);
-            visor = Sprites.Make(transform, "Facing", Sprites.Box(10, 4), Sprites.Hex("3ff2ff"), 1, new Vector2(0f, 1.55f));
-            gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.0f));
+            visor = Sprites.Make(transform, "Facing", Sprites.Box(10, 4), Sprites.Hex("3ff2ff"), 1, new Vector2(0f, 1.95f));
+            gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.25f));
             gun = gunSr.transform;
             gameObject.AddComponent<YSort>();
 
@@ -239,17 +239,17 @@ namespace NeonDrift
             {
                 switch (Facing)
                 {
-                    case Dir.Down: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = 1; break;
-                    case Dir.Up: visor.transform.localPosition = new Vector2(0f, 1.55f); visor.sortingOrder = -1; break;
-                    case Dir.Right: visor.transform.localPosition = new Vector2(0.22f, 1.55f); visor.sortingOrder = 1; break;
-                    case Dir.Left: visor.transform.localPosition = new Vector2(-0.22f, 1.55f); visor.sortingOrder = 1; break;
+                    case Dir.Down: visor.transform.localPosition = new Vector2(0f, 1.95f); visor.sortingOrder = 1; break;
+                    case Dir.Up: visor.transform.localPosition = new Vector2(0f, 1.95f); visor.sortingOrder = -1; break;
+                    case Dir.Right: visor.transform.localPosition = new Vector2(0.22f, 1.95f); visor.sortingOrder = 1; break;
+                    case Dir.Left: visor.transform.localPosition = new Vector2(-0.22f, 1.95f); visor.sortingOrder = 1; break;
                 }
             }
 
             // 枪 360° 指向瞄准方向；朝上时画在身体后面
             float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
             gun.localRotation = Quaternion.Euler(0, 0, ang);
-            gun.localPosition = new Vector2(0f, 1.0f) + AimDir * 0.35f;
+            gun.localPosition = new Vector2(0f, 1.25f) + AimDir * 0.45f;
             var gsr = gun.GetComponent<SpriteRenderer>();
             gsr.sortingOrder = Facing == Dir.Up ? -2 : 2;
             gsr.flipY = AimDir.x < 0f;

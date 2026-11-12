@@ -15,7 +15,7 @@ namespace NeonDrift
         [System.Serializable]
         class Meta { public float pivotX = 0.5f; public float pivotY = 0f; public float foot = 0f; public string light = ""; public string unique = ""; public float fireX = 0f; public float fireY = -1f; }
 
-        public class Entry { public string name; public Sprite sprite; public float foot; public string light; public string unique; public float footX, footY; public Vector2 fire = new Vector2(0f, -1f); }
+        public class Entry { public string name; public Sprite sprite; public float foot; public string light; public string unique; public float footX, footY; public Vector2 fire = new Vector2(0f, -1f); public Glow.Info glow; }
 
         /// <summary>
         /// 从图的底部轮廓算出物件实际占地（格）：支点（最低点）是前角，
@@ -70,7 +70,8 @@ namespace NeonDrift
                     string nm = Path.GetFileNameWithoutExtension(png);
                     sp.name = nm;
                     var fp = meta.pivotY > 0.5f ? Vector2.zero : Footprint(tex, meta.pivotX);
-                    list.Add(new Entry { name = nm, sprite = sp, foot = meta.foot, light = meta.light ?? "", unique = meta.unique ?? "", footX = fp.x, footY = fp.y, fire = new Vector2(meta.fireX, meta.fireY) / Sprites.PPU });
+                    list.Add(new Entry { name = nm, sprite = sp, foot = meta.foot, light = meta.light ?? "", unique = meta.unique ?? "", footX = fp.x, footY = fp.y, fire = new Vector2(meta.fireX, meta.fireY) / Sprites.PPU,
+                                         glow = Path.GetFileName(dir) == "decals" ? null : Glow.Extract(tex, new Vector2(meta.pivotX, meta.pivotY), 1) });
                     n++;
                 }
                 cats[Path.GetFileName(dir)] = list;
@@ -79,7 +80,7 @@ namespace NeonDrift
         }
 
         /// <summary>立一个物件。solid = 有碰撞（掩体、车、电话亭）。</summary>
-        public static GameObject Place(Transform parent, Entry e, Vector2 tile, bool flip, bool solid)
+        public static GameObject Place(Transform parent, Entry e, Vector2 tile, bool flip, bool solid, bool shadow = true)
         {
             var go = new GameObject(e.name);
             go.transform.SetParent(parent, true);
@@ -93,7 +94,48 @@ namespace NeonDrift
             if (solid && e.footX > 0f) AddFoot(go, tile, flip ? e.footY : e.footX, flip ? e.footX : e.footY);
             go.AddComponent<SortingGroup>();
             go.AddComponent<YSort>().isStatic = true;
+            if (shadow && e.footX > 0f) Shadow(parent, tile, flip ? e.footY : e.footX, flip ? e.footX : e.footY);
+            // 发光部分（路灯灯罩、售货机屏幕、霓虹牌、电话亭、车灯、电网）；自己已经带灯的（路灯、火桶）不再加灯
+            if (e.glow != null)
+                Glow.Attach(go.transform, parent, e.glow, flip, 10, string.IsNullOrEmpty(e.light) ? 1 : 0, null,
+                            new System.Random(Mathf.RoundToInt(tile.x * 97 + tile.y * 31)), flicker: e.unique == "");
             return go;
+        }
+
+        static Sprite shadowSprite;
+
+        /// <summary>
+        /// 脚下一圈柔和的接地阴影，盖在地面上、压在所有物件和角色下面，让东西看起来是压在地上的，而不是贴在画面上。
+        /// 不挂在物件下面（物件有排序组，会把阴影一起排到前面去）。
+        /// </summary>
+        public static void Shadow(Transform parent, Vector2 front, float fx, float fy, float strength = 0.5f)
+        {
+            if (shadowSprite == null)
+            {
+                const int W = 64, H = 32;
+                var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var px = new Color32[W * H];
+                for (int y = 0; y < H; y++)
+                    for (int x = 0; x < W; x++)
+                    {
+                        float u = (x + 0.5f) / W * 2f - 1f, v = (y + 0.5f) / H * 2f - 1f;
+                        float r = Mathf.Sqrt(u * u + v * v);
+                        float a = Mathf.Clamp01(1f - r);
+                        px[y * W + x] = new Color32(0, 0, 0, (byte)(255 * a * a * (3f - 2f * a)));
+                    }
+                tex.SetPixels32(px);
+                tex.Apply();
+                shadowSprite = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), Sprites.PPU, 0, SpriteMeshType.FullRect);
+            }
+            var sr = new GameObject("Shadow").AddComponent<SpriteRenderer>();
+            sr.transform.SetParent(parent, true);
+            sr.transform.position = Iso.W(front.x - fx * 0.5f, front.y - fy * 0.5f);
+            float w = (fx + fy) * Iso.HW * 1.35f + 0.3f;                  // 比占地稍大一圈
+            sr.transform.localScale = new Vector3(w / 2f, w / 2f, 1f);     // 贴图本身是 2×1 单位，正好是斜 45° 的扁椭圆
+            sr.sprite = shadowSprite;
+            sr.sharedMaterial = Sprites.Unlit;
+            sr.color = new Color(0f, 0f, 0f, strength);
+            sr.sortingOrder = -29975;
         }
 
         /// <summary>按占地加一个菱形碰撞：front 是前角，沿 -x 占 fx 格、沿 -y 占 fy 格。</summary>

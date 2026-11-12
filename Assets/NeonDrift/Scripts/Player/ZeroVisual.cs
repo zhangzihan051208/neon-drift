@@ -186,14 +186,15 @@ namespace NeonDrift
         {
             body = bodyRenderer;
             gun = gunRenderer;
-            var frontTex = LoadTex("zero_front.png", 36, 64);
-            var backTex = LoadTex("zero_back.png", 36, 64);
-            var idleTex = LoadTex("zero_idle.png", 56, 64);
-            var walkTex = LoadTex("zero_walk.png", 56 * 8, 64);
-            var sprintTex = LoadTex("zero_sprint.png", 56 * 6, 64);
-            var dashTex = LoadTex("zero_dash.png", 56 * 8, 64);
-            var hitTex = LoadTex("zero_hit.png", 56 * 6, 64);
-            var gunTex = LoadTex("zero_gun.png", 56 * 8, 64);
+            // 80 像素高的加宽版（原来 64 像素高、偏细长）：正背面每帧 56×80，侧面每帧 88×80
+            var frontTex = LoadTex("zero_front.png", 56, 80);
+            var backTex = LoadTex("zero_back.png", 56, 80);
+            var idleTex = LoadTex("zero_idle.png", 88, 80);
+            var walkTex = LoadTex("zero_walk.png", 88 * 8, 80);
+            var sprintTex = LoadTex("zero_sprint.png", 88 * 6, 80);
+            var dashTex = LoadTex("zero_dash.png", 88 * 8, 80);
+            var hitTex = LoadTex("zero_hit.png", 88 * 6, 80);
+            var gunTex = LoadTex("zero_gun.png", 88 * 8, 80);
             if (frontTex == null || backTex == null || idleTex == null || walkTex == null || sprintTex == null || dashTex == null || hitTex == null || gunTex == null)
                 return false;
 

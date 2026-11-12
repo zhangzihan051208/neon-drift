@@ -31,6 +31,7 @@ namespace NeonDrift
                 cam = go.AddComponent<Camera>();
             }
             cam.orthographic = true;
+            cam.allowHDR = true;                 // 发光层亮度超过 1，泛光靠它分辨
             cam.orthographicSize = RefH / 2f / Sprites.PPU;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = Color.black;      // 没有贴图的地方一律是黑色（以后换成水面背景）

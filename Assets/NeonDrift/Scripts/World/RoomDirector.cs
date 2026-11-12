@@ -76,6 +76,10 @@ namespace NeonDrift
             Iso.Ground(t, "FloorNE", x0, y0 - dNE, x1, y0, FloorCol, -30000);
             Iso.Ground(t, "FloorNW", x0 - dNW, y0, x0, y1, FloorCol, -30000);
             Iso.Ground(t, "FloorCorner", x0 - dNW, y0 - dNE, x0, y0, FloorCol, -30000);
+            // 墙根暗影：房子脚下沿墙线往外 1.8 格逐渐变暗，房子像是立在地上而不是贴在上面
+            Color dk = new Color(0f, 0f, 0f, 0.5f), cl = new Color(0f, 0f, 0f, 0f);
+            Iso.Gradient(t, "WallAO", new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y0 + 1.8f), new Vector2(x0, y0 + 1.8f) }, new[] { dk, dk, cl, cl }, -29978);
+            Iso.Gradient(t, "WallAO", new[] { new Vector2(x0, y0), new Vector2(x0 + 1.8f, y0), new Vector2(x0 + 1.8f, y1), new Vector2(x0, y1) }, new[] { dk, cl, cl, dk }, -29978);
             // 往后扩出来那段平台朝镜头的两条边：厚板、水管、桩子、护栏
             var prng = new System.Random(x0 * 7 + y0 * 13);
             Platform.Edge(t, new Vector2(x0 - dNW, y1), new Vector2(x0, y1), prng);
@@ -159,7 +163,7 @@ namespace NeonDrift
             }
 
             // 路灯和火桶：街区里主要的光源
-            var lampCols = new[] { "ffc25a", "ff5a2e", "35e0d0", "e0409a" };
+            var lampCols = new[] { "ffc25a", "ff5a2e", "ffb070", "e0409a" };      // 路灯只用暖色和洋红，不用青色
             for (int i = 0, tries = 0; i < 3 && tries < 100; tries++)
             {
                 int lx = x0 + 2 + rng.Next(gx - 4), ly = y0 + 2 + rng.Next(gy - 4);
@@ -235,7 +239,7 @@ namespace NeonDrift
                         if (hit) continue;
                         blocked.Add(r);
                         var go = Props.Place(t, booth, new Vector2(bx2, by2), false, true);
-                        Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 1.6f, Sprites.Hex("9af6ff"), 3.5f, 1.4f, flicker: true);
+                        Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 1.6f, Sprites.Hex("ffe2a8"), 3f, 1.2f, flicker: true);      // 电话亭里是暖黄的灯，不再发青光
                         Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 0.3f, Sprites.Hex("ffd27a"), 2f, 0.9f);
                         break;
                     }
@@ -371,7 +375,7 @@ namespace NeonDrift
             {
                 bool alongX = Mathf.Abs(a.y - b.y) < 0.001f;
                 Vector2 low = alongX ? new Vector2(Mathf.Max(a.x, b.x), a.y) : new Vector2(a.x, Mathf.Max(a.y, b.y));
-                Props.Place(go.transform, spr, low, alongX, false);
+                Props.Place(go.transform, spr, low, alongX, false, shadow: false);
             }
             else
             {

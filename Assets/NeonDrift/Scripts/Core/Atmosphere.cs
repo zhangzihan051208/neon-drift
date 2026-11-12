@@ -29,7 +29,7 @@ namespace NeonDrift
                 g.transform.SetParent(go.transform, false);
                 g.lightType = Light2D.LightType.Global;
             }
-            g.color = Sprites.Hex("6f8fa8");
+            g.color = Sprites.Hex("8e959c");     // 环境光：接近中性的灰，只带一点点冷，不再把整片地面染蓝
             g.intensity = 0.6f;       // 地面保持深色，路灯和火桶附近才亮起来
 
             Rain(cam);
@@ -41,8 +41,8 @@ namespace NeonDrift
             vol.priority = 10f;
             var prof = ScriptableObject.CreateInstance<VolumeProfile>();
             var bloom = prof.Add<Bloom>(true);
-            bloom.intensity.Override(1.1f);
-            bloom.threshold.Override(0.7f);
+            bloom.intensity.Override(1.3f);
+            bloom.threshold.Override(1.0f);      // 只有发光层（亮度超过 1）会晕开，普通的亮色不会
             bloom.scatter.Override(0.72f);
             var vig = prof.Add<Vignette>(true);
             vig.intensity.Override(0.32f);
@@ -83,8 +83,8 @@ namespace NeonDrift
             var main = ps.main;
             main.loop = true;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.3f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.14f, 0.26f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.0f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);       // 火桶约 26 像素高，火苗跟着小一点
             main.maxParticles = 80;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.gravityModifier = -0.15f;                                  // 往上飘
@@ -93,7 +93,7 @@ namespace NeonDrift
             var sh = ps.shape;
             sh.shapeType = ParticleSystemShapeType.Cone;
             sh.angle = 12f;
-            sh.radius = 0.18f;
+            sh.radius = 0.13f;
             sh.rotation = new Vector3(-90f, 0f, 0f);                        // 锥口朝上
             var sz = ps.sizeOverLifetime;
             sz.enabled = true;
@@ -112,7 +112,7 @@ namespace NeonDrift
             noise.scrollSpeed = 1.5f;
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Billboard;
-            r.sharedMaterial = Sprites.Unlit;
+            r.sharedMaterial = Glow.Mat();
             r.sortingOrder = 5;                                             // 在火桶的排序组里，画在桶上面
 
             // 火星：少量、更快、飞得更高
@@ -146,7 +146,7 @@ namespace NeonDrift
                        new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
             sc.color = sg;
             var sr = sgo.GetComponent<ParticleSystemRenderer>();
-            sr.sharedMaterial = Sprites.Unlit;
+            sr.sharedMaterial = Glow.Mat();
             sr.sortingOrder = 6;
             ps.Play();
             sp.Play();
@@ -164,12 +164,12 @@ namespace NeonDrift
             main.loop = true;
             main.startLifetime = 1.0f;
             main.startSpeed = 0f;
-            main.startSize = 0.035f;
-            main.startColor = new Color(0.62f, 0.76f, 0.82f, 0.2f);
+            main.startSize = 0.025f;
+            main.startColor = new Color(0.62f, 0.76f, 0.82f, 0.13f);
             main.maxParticles = 2000;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var em = ps.emission;
-            em.rateOverTime = 900f;
+            em.rateOverTime = 420f;              // 小雨：密度减半多
             var sh = ps.shape;
             sh.shapeType = ParticleSystemShapeType.Box;
             sh.scale = new Vector3(hw * 2.6f, 0.1f, 0.1f);
@@ -181,7 +181,7 @@ namespace NeonDrift
             vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Stretch;
-            r.velocityScale = 0.022f;
+            r.velocityScale = 0.016f;            // 雨丝短一点
             r.lengthScale = 1f;
             r.sharedMaterial = Sprites.Unlit;
             r.sortingOrder = 32000;
@@ -205,7 +205,7 @@ namespace NeonDrift
             main.maxParticles = 600;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var em = ps.emission;
-            em.rateOverTime = 260f;
+            em.rateOverTime = 110f;
             var sh = ps.shape;
             sh.shapeType = ParticleSystemShapeType.Box;
             sh.scale = new Vector3(hw * 2f, hh * 2f, 0.1f);

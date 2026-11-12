@@ -1,0 +1,107 @@
+[
+ {
+  "building": "clinic",
+  "file": "clinic_0",
+  "dx": -38.5,
+  "dy": 157.9,
+  "style": "facade"
+ },
+ {
+  "building": "clinic",
+  "file": "clinic_1",
+  "dx": -66.2,
+  "dy": 133.9,
+  "style": "facade"
+ },
+ {
+  "building": "noodle",
+  "file": "noodle_0",
+  "dx": -71.4,
+  "dy": 186.9,
+  "style": "facade"
+ },
+ {
+  "building": "noodle",
+  "file": "noodle_1",
+  "dx": -15.3,
+  "dy": 161.3,
+  "style": "blade"
+ },
+ {
+  "building": "pawn",
+  "file": "pawn_0",
+  "dx": -17.5,
+  "dy": 149.3,
+  "style": "blade"
+ },
+ {
+  "building": "pawn",
+  "file": "pawn_1",
+  "dx": -36.0,
+  "dy": 193.0,
+  "style": "facade"
+ },
+ {
+  "building": "cyberfix",
+  "file": "cyberfix_0",
+  "dx": -46.5,
+  "dy": 273.5,
+  "style": "roof"
+ },
+ {
+  "building": "cyberfix",
+  "file": "cyberfix_1",
+  "dx": -28.8,
+  "dy": 155.2,
+  "style": "blade"
+ },
+ {
+  "building": "garage",
+  "file": "garage_0",
+  "dx": -50.4,
+  "dy": 174.5,
+  "style": "roof"
+ },
+ {
+  "building": "tattoo",
+  "file": "tattoo_0",
+  "dx": -51.4,
+  "dy": 208.5,
+  "style": "facade"
+ },
+ {
+  "building": "tattoo",
+  "file": "tattoo_1",
+  "dx": -31.3,
+  "dy": 151.3,
+  "style": "blade"
+ },
+ {
+  "building": "utility",
+  "file": "utility_0",
+  "dx": -47.2,
+  "dy": 140.4,
+  "style": "facade"
+ },
+ {
+  "building": "containers",
+  "file": "containers_0",
+  "dx": -46.5,
+  "dy": 133.7,
+  "style": "facade"
+ },
+ {
+  "building": "containers",
+  "file": "containers_1",
+  "dx": -12.1,
+  "dy": 124.9,
+  "style": "blade"
+ },
+ {
+  "building": "shanty",
+  "file": "shanty_0",
+  "dx": -58.2,
+  "dy": 209.5,
+  "style": "roof"
+ }
+]

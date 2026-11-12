@@ -104,6 +104,26 @@ namespace NeonDrift
             mr.receiveShadows = false;
         }
 
+        /// <summary>一块四个角颜色不同的地面叠层（格子坐标），用来做墙根暗影这类渐变。</summary>
+        public static void Gradient(Transform parent, string name, Vector2[] tiles, Color[] cols, int order)
+        {
+            Vector2 min = W(tiles[0].x, tiles[0].y);
+            foreach (var t in tiles) min = Vector2.Min(min, W(t.x, t.y));
+            var verts = new Vector3[4]; var uvs = new Vector2[4];
+            for (int i = 0; i < 4; i++) { verts[i] = W(tiles[i].x, tiles[i].y) - min; uvs[i] = new Vector2(0.5f, 0.5f); }
+            var mesh = new Mesh { name = name, vertices = verts, uv = uvs, colors = cols, triangles = new[] { 0, 2, 1, 0, 3, 2 } };
+            mesh.RecalculateBounds();
+            var go = new GameObject(name);
+            go.transform.position = min;
+            if (parent != null) go.transform.SetParent(parent, true);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = Sprites.Unlit;
+            mr.sortingOrder = order;
+            mr.shadowCastingMode = ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+        }
+
         /// <summary>立在格子线上的一片竖直面（墙、闸门、护栏）。a、b 是底边两端的格子坐标。</summary>
         public static MeshRenderer Face(Transform parent, string name, Vector2 a, Vector2 b, float height, Color color, int order, float z0 = 0f, bool glow = false)
         {
