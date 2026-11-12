@@ -9,7 +9,21 @@ namespace NeonDrift
         public const int PPU = 32;
 
         static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
-        static Material unlit;
+        static Material unlit, lit;
+
+        /// <summary>受 2D 灯光影响的材质：地面、墙、掩体用它。</summary>
+        public static Material Lit
+        {
+            get
+            {
+                if (lit == null)
+                {
+                    var sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default");
+                    lit = sh != null ? new Material(sh) : Unlit;
+                }
+                return lit;
+            }
+        }
 
         public static Material Unlit
         {

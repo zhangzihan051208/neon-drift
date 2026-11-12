@@ -13,12 +13,12 @@ namespace NeonDrift
 
         static readonly Vector2Int[] Sizes =
         {
-            new Vector2Int(16, 14), new Vector2Int(18, 12), new Vector2Int(14, 14), new Vector2Int(20, 11), new Vector2Int(13, 17),
+            new Vector2Int(20, 18), new Vector2Int(22, 16), new Vector2Int(18, 18), new Vector2Int(24, 14), new Vector2Int(16, 21),
         };
 
-        static readonly Color StreetCol = Sprites.Hex("181b1f");
-        static readonly Color RailCol = Sprites.Hex("4a5458");
-        static readonly Color WallCol = Sprites.Hex("2a2e32");
+        static readonly Color StreetCol = Sprites.Hex("242c3a");
+        static readonly Color RailCol = Sprites.Hex("b5622e");
+        static readonly Color WallCol = Sprites.Hex("2c3442");
 
         public static WorldBuilder Build(PlayerController player, int blockCount = 5)
         {
@@ -28,7 +28,7 @@ namespace NeonDrift
 
             int bx = 0, by = 0;
             Side entrySide = Side.None; int entryAt = 0;
-            Side nextExit = rng.Next(2) == 0 ? Side.NE : Side.NW;
+            Side nextExit = Side.NE;      // 第一个街区固定往右上出，左上墙留给回声诊所
 
             for (int i = 1; i <= blockCount; i++)
             {
@@ -50,17 +50,17 @@ namespace NeonDrift
                 if (last) break;
 
                 // 连接段：3 格宽的街道，从出口缺口一直通到下一个街区的入口
-                int len = 6 + rng.Next(5);
+                int len = Mathf.Max(6 + rng.Next(5), (exitSide == Side.NE ? block.BackNE : block.BackNW) + 4);
                 if (exitSide == Side.NE)
                 {
                     int sx = bx + exitAt;
-                    wb.Street(sx, by - len, sx + RoomDirector.GateWidth, by, alongY: true);
+                    wb.Street(sx, by - len, sx + RoomDirector.GateWidth, by, alongY: true, inner: block.BackNE);
                     bx = sx; by = by - len;                 // 下一个街区的入口缺口左端在 (bx, by)
                 }
                 else
                 {
                     int sy = by + exitAt;
-                    wb.Street(bx - len, sy, bx, sy + RoomDirector.GateWidth, alongY: false);
+                    wb.Street(bx - len, sy, bx, sy + RoomDirector.GateWidth, alongY: false, inner: block.BackNW);
                     by = sy; bx = bx - len;
                 }
                 entrySide = exitSide;
@@ -69,23 +69,26 @@ namespace NeonDrift
             return wb;
         }
 
-        void Street(int x0, int y0, int x1, int y1, bool alongY)
+        /// <summary>
+        /// 连接段：3 格宽的街道，从出口一直通到下一个街区的入口。
+        /// 起点那 inner 格穿过上一个街区放房子的那圈平台，那里不画护栏和平台边；其余部分两侧都围上护栏。
+        /// </summary>
+        void Street(int x0, int y0, int x1, int y1, bool alongY, int inner)
         {
             var t = transform;
-            Iso.Poly(t, "Street", new[] { Iso.W(x0, y0), Iso.W(x1, y0), Iso.W(x1, y1), Iso.W(x0, y1) }, StreetCol, -30000);
+            Iso.Ground(t, "Street", x0, y0, x1, y1, StreetCol, -30000);
             var host = new GameObject("StreetBounds");
             host.transform.SetParent(t, false);
+            var prng = new System.Random(x0 * 31 + y0 * 17);
             if (alongY)
             {
-                // 后侧（x 小的一边）是矮墙，前侧（x 大的一边）是护栏
                 Iso.Edge(host, new Vector2(x0, y0), new Vector2(x0, y1));
                 Iso.Edge(host, new Vector2(x1, y0), new Vector2(x1, y1));
-                for (int j = y0; j < y1; j++)
+                if (y1 - inner > y0)
                 {
-                    float top = Mathf.Max(Iso.W(x0, j).y, Iso.W(x0, j + 1).y);
-                    Iso.Face(t, "StreetWall", new Vector2(x0, j + 1), new Vector2(x0, j), 0.9f, WallCol, Iso.Order(top + 0.05f));
-                    float low = Mathf.Min(Iso.W(x1, j).y, Iso.W(x1, j + 1).y);
-                    Iso.Face(t, "StreetRail", new Vector2(x1, j), new Vector2(x1, j + 1), 0.06f, RailCol, Iso.Order(low - 0.05f), 0.3f);
+                    Platform.Edge(t, new Vector2(x1, y0), new Vector2(x1, y1 - inner), prng);
+                    Platform.Fence(t, new Vector2(x1, y0), new Vector2(x1, y1 - inner), false, prng);    // 朝镜头那侧
+                    Platform.Fence(t, new Vector2(x0, y0), new Vector2(x0, y1 - inner), true, prng);     // 背面那侧
                 }
                 for (int j = y0; j < y1; j += 2)             // 路面中线
                     Iso.Poly(t, "Lane", new[] { Iso.W(x0 + 1.45f, j), Iso.W(x0 + 1.55f, j), Iso.W(x0 + 1.55f, j + 1), Iso.W(x0 + 1.45f, j + 1) }, Sprites.Hex("8a7a3a"), -29990);
@@ -94,12 +97,11 @@ namespace NeonDrift
             {
                 Iso.Edge(host, new Vector2(x0, y0), new Vector2(x1, y0));
                 Iso.Edge(host, new Vector2(x0, y1), new Vector2(x1, y1));
-                for (int i = x0; i < x1; i++)
+                if (x1 - inner > x0)
                 {
-                    float top = Mathf.Max(Iso.W(i, y0).y, Iso.W(i + 1, y0).y);
-                    Iso.Face(t, "StreetWall", new Vector2(i, y0), new Vector2(i + 1, y0), 0.9f, WallCol, Iso.Order(top + 0.05f));
-                    float low = Mathf.Min(Iso.W(i, y1).y, Iso.W(i + 1, y1).y);
-                    Iso.Face(t, "StreetRail", new Vector2(i, y1), new Vector2(i + 1, y1), 0.06f, RailCol, Iso.Order(low - 0.05f), 0.3f);
+                    Platform.Edge(t, new Vector2(x0, y1), new Vector2(x1 - inner, y1), prng);
+                    Platform.Fence(t, new Vector2(x0, y1), new Vector2(x1 - inner, y1), false, prng);
+                    Platform.Fence(t, new Vector2(x0, y0), new Vector2(x1 - inner, y0), true, prng);
                 }
                 for (int i = x0; i < x1; i += 2)
                     Iso.Poly(t, "Lane", new[] { Iso.W(i, y0 + 1.45f), Iso.W(i + 1, y0 + 1.45f), Iso.W(i + 1, y0 + 1.55f), Iso.W(i, y0 + 1.55f) }, Sprites.Hex("8a7a3a"), -29990);

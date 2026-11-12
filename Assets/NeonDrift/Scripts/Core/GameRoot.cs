@@ -32,6 +32,7 @@ namespace NeonDrift
         {
             I = this;
             CameraRig.Setup();
+            Atmosphere.Setup(Camera.main);
             gameObject.AddComponent<GreyboxHUD>();
             StartRun();
         }
