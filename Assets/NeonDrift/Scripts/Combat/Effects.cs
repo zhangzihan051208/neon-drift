@@ -48,14 +48,28 @@ namespace NeonDrift
         }
 
         /// <summary>闪移残影：复制角色身体的剪影并淡出。</summary>
-        public static void Afterimage(SpriteRenderer src, Color color)
+        static Material ghostMat;
+        static bool ghostTried;
+
+        /// <summary>
+        /// 闪移残影：复制角色这一刻的样子，颜色往冷灰色混（深色大衣在暗处也看得见），然后淡出。
+        /// order：排在角色身后（传角色排序组当前的值减 1），不会被路过的物件盖住。
+        /// </summary>
+        public static void Afterimage(SpriteRenderer src, Color color, int order = int.MinValue, float life = 0.22f)
         {
-            var sr = Sprites.Make(null, "Afterimage", src.sprite, color, src.sortingOrder - 1, src.transform.position);
+            var sr = Sprites.Make(null, "Afterimage", src.sprite, color, order == int.MinValue ? src.sortingOrder - 1 : order, src.transform.position);
             sr.transform.localScale = src.transform.lossyScale;
             sr.flipX = src.flipX;
             sr.flipY = src.flipY;
+            if (!ghostTried)
+            {
+                ghostTried = true;
+                var sh = Shader.Find("NeonDrift/Ghost");
+                if (sh != null) ghostMat = new Material(sh);
+            }
+            if (ghostMat != null) sr.sharedMaterial = ghostMat;
             var f = sr.gameObject.AddComponent<Fader>();
-            f.life = f.maxLife = 0.18f;
+            f.life = f.maxLife = life;
         }
 
         public static GameObject SpawnMarker(Vector2 pos, Color color)

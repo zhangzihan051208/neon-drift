@@ -56,7 +56,7 @@ namespace NeonDrift
         Transform gun;
         ZeroVisual visual;
         Vector2 move, dashDir;
-        float dashT, dashCd, fireCd, lastShotTime = -9f, lastMouseMove = -9f, dashBuf, recoil, stepT;
+        float dashT, dashCd, fireCd, lastShotTime = -9f, lastMouseMove = -9f, dashBuf, recoil, stepT, ghostT;
         Vector2 lastMousePos;
         bool sprintHeld, shotVisual;
 
@@ -86,13 +86,13 @@ namespace NeonDrift
             feet.offset = new Vector2(0f, 0.25f);
             var hurt = gameObject.AddComponent<BoxCollider2D>();
             hurt.isTrigger = true;
-            hurt.size = new Vector2(0.6f, 1.6f);
-            hurt.offset = new Vector2(0f, 0.85f);
+            hurt.size = new Vector2(0.7f, 2.2f);          // 新的零约 2.6 个单位高，受击框比图略小一圈
+            hurt.offset = new Vector2(0f, 1.15f);
 
             // 红方块是动作图加载失败时的退路。加载成功后换成 64 像素高的零，脚底仍在原点。
             body = Sprites.Make(transform, "Body", Sprites.Box(22, 60, feet: true), CoatRed, 0, Vector2.zero);
             visor = Sprites.Make(transform, "Facing", Sprites.Box(10, 4), Sprites.Hex("3ff2ff"), 1, new Vector2(0f, 1.95f));
-            gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.25f));
+            gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 2.15f));
             gun = gunSr.transform;
             gameObject.AddComponent<YSort>();
             GroundShadow.Attach(transform, 1.1f);
@@ -109,10 +109,17 @@ namespace NeonDrift
             };
             hp.Died += () =>
             {
-                var burst = visual != null && visual.Ready ? Sprites.Hex("d7dde6") : CoatRed;
-                Effects.Burst(transform.position + Vector3.up * 0.8f, burst);
-                foreach (var r in GetComponentsInChildren<SpriteRenderer>()) r.enabled = false;
                 rb.linearVelocity = Vector2.zero;
+                if (visual != null && visual.Ready)
+                {
+                    visual.PlayDeath(Facing);                         // 播倒地动作，停在最后一帧躺着
+                    CameraRig.Shake(0.3f);
+                }
+                else
+                {
+                    Effects.Burst(transform.position + Vector3.up * 0.8f, CoatRed);
+                    foreach (var r in GetComponentsInChildren<SpriteRenderer>()) r.enabled = false;
+                }
                 GameRoot.I?.OnPlayerDied();
             };
         }
@@ -126,6 +133,18 @@ namespace NeonDrift
             dashCd -= Time.deltaTime;
             fireCd -= Time.deltaTime;
             dashBuf -= Time.deltaTime;
+            // 闪移残影：每 0.035 秒在当前位置留一个，冷灰色，0.22 秒淡出
+            if (IsDashing)
+            {
+                ghostT -= Time.deltaTime;
+                if (ghostT <= 0f)
+                {
+                    ghostT = 0.035f;
+                    var grp = GetComponent<UnityEngine.Rendering.SortingGroup>();
+                    Effects.Afterimage(body, new Color(0.46f, 0.50f, 0.62f, 0.45f), grp != null ? grp.sortingOrder - 60 : int.MinValue);      // 往上冲时人在画面里越来越靠后，残影要排得足够靠后才不会盖住人
+                }
+            }
+            else ghostT = 0f;
             recoil = Mathf.MoveTowards(recoil, 0f, Time.deltaTime * 1.8f);
             // 湿地上走路溅起一点水
             if (move.sqrMagnitude > 0.01f && !IsDashing)
@@ -156,7 +175,7 @@ namespace NeonDrift
                 || (gp != null && gp.leftShoulder.isPressed);
 
             // 瞄准：鼠标 > 右摇杆 > 自动瞄准最近敌人
-            Vector2 origin = (Vector2)transform.position + Vector2.up * 1.25f;      // 和枪口同高，子弹才会真的打向准星
+            Vector2 origin = (Vector2)transform.position + Vector2.up * 2.15f;      // 和枪口同高，子弹才会真的打向准星
             Vector2 aim = AimDir;
             if (ms != null)
             {
@@ -186,6 +205,8 @@ namespace NeonDrift
 
             // 射击
             bool fire = (ms != null && ms.leftButton.isPressed) || (gp != null && gp.rightTrigger.ReadValue() > 0.4f);
+            // 开枪时不能跑：按住射击、或者刚开过枪的 0.35 秒内，按着 Shift 也只是走
+            if (fire || Time.time - lastShotTime < 0.35f) sprintHeld = false;
             if (fire && fireCd <= 0f && energy >= energyCost && !IsDashing) Shoot();
 
             // 闪移
@@ -199,7 +220,7 @@ namespace NeonDrift
             fireCd = 1f / fireRate;
             energy -= energyCost;
             lastShotTime = Time.time;
-            Vector2 muzzle = (Vector2)gun.position + AimDir * 0.45f;
+            Vector2 muzzle = (Vector2)gun.position + AimDir * 0.8f;      // 画出来的枪口离身体约 1.25 个单位
             float a = Random.Range(-spreadDegrees, spreadDegrees);
             Vector2 d = Quaternion.Euler(0, 0, a) * AimDir;
             Projectile.Spawn(muzzle, d, Team.Player, bulletSpeed, bulletDamage, bulletBounces, Sprites.Hex("ffb347"));
@@ -224,13 +245,10 @@ namespace NeonDrift
             if (IsDead) { rb.linearVelocity = Vector2.zero; return; }
             if (dashT > 0f)
             {
-                rb.linearVelocity = dashDir * dashSpeed;
+                // 先快后慢：起步 1.4 倍速，收尾 0.55 倍速，平均下来和原来的距离差不多
+                float u = 1f - Mathf.Clamp01(dashT / dashTime);
+                rb.linearVelocity = dashDir * dashSpeed * (1.4f - 0.85f * u);
                 dashT -= Time.fixedDeltaTime;
-                // 像素身体大部分是深色，染色会把白头发染掉、黑大衣隐掉。保留原色，只降低透明度。
-                var ghost = visual != null && visual.Ready
-                    ? new Color(1f, 1f, 1f, 0.55f)
-                    : new Color(1f, 0.16f, 0.43f, 0.45f);
-                Effects.Afterimage(body, ghost);
                 if (dashT <= 0f)
                 {
                     hp.invulnerable = false;
@@ -264,11 +282,12 @@ namespace NeonDrift
             // 枪 360° 指向瞄准方向；朝上时画在身体后面
             float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
             gun.localRotation = Quaternion.Euler(0, 0, ang);
-            gun.localPosition = new Vector2(0f, 1.25f) + AimDir * (0.45f - recoil);      // 开枪后枪往回顶一下
+            gun.localPosition = new Vector2(0f, 2.15f) + AimDir * (0.45f - recoil);      // 开枪后枪往回顶一下
             var gsr = gun.GetComponent<SpriteRenderer>();
             gsr.sortingOrder = Facing == Dir.Up ? -2 : 2;
             gsr.flipY = AimDir.x < 0f;
 
+            visual?.SetAim(AimDir);
             visual?.Tick(Facing, move.sqrMagnitude > 0.01f, sprintHeld && move.sqrMagnitude > 0.01f,
                 IsDashing, dashDir, dashT, dashTime, shotVisual);
             shotVisual = false;

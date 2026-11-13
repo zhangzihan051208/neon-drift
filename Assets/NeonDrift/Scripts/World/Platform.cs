@@ -9,7 +9,7 @@ namespace NeonDrift
     public static class Platform
     {
         const float Slab = 0.6f;             // 厚板高度（格子竖直单位，会乘 Iso.S）
-        static readonly Color SlabCol = Sprites.Hex("141a22");
+        static readonly Color SlabCol = Sprites.Hex("0b0c0f");      // 平台边缘：近乎纯黑
         static readonly Color PipeCol = Sprites.Hex("8a4a24");
         static readonly Color PipeHi = Sprites.Hex("b06a3a");
         static readonly Color Water = new Color(0.30f, 0.40f, 0.36f, 0.34f);
@@ -23,9 +23,9 @@ namespace NeonDrift
             Vector2 inward = alongX ? new Vector2(0f, -0.35f) : new Vector2(-0.35f, 0f);
 
             Iso.Face(parent, "Slab", a, b, Slab, SlabCol, -30010, -Slab, glow: true);
-            Iso.Face(parent, "SlabLip", a, b, 0.05f, Sprites.Hex("26303c"), -30009, -0.05f, glow: true);
-            Iso.Face(parent, "Pipe", a, b, 0.09f, PipeCol, -30005, -0.2f, glow: true);
-            Iso.Face(parent, "PipeHi", a, b, 0.025f, PipeHi, -30004, -0.12f, glow: true);
+            Iso.Face(parent, "SlabLip", a, b, 0.05f, Sprites.Hex("1c1e23"), -30009, -0.05f, glow: true);
+            SlabStreaks(parent, a, dir, len, rng);
+            RustyRun(parent, a, dir, len, rng);
 
             var pile = Props.Find("platform", "pile");
             if (pile != null)
@@ -54,6 +54,57 @@ namespace NeonDrift
             }
         }
 
+        // ---------------------------------------------------------------- 做旧：锈迹、深浅不一的管子
+        static Color Jit(Color c, System.Random rng, float amt)
+        {
+            float k = 1f + ((float)rng.NextDouble() * 2f - 1f) * amt;
+            return new Color(Mathf.Clamp01(c.r * k), Mathf.Clamp01(c.g * k), Mathf.Clamp01(c.b * k), c.a);
+        }
+
+        static readonly Color[] RustTones = { Sprites.Hex("7a3e1f"), Sprites.Hex("8a4a24"), Sprites.Hex("6b3a22"), Sprites.Hex("94532a"), Sprites.Hex("5c3020") };
+        static readonly Color RustBloom = Sprites.Hex("b8642c"), RustDark = Sprites.Hex("3a1e10");
+
+        /// <summary>沿边的横水管：一段一段深浅不一，夹着亮锈斑和深色接口箍，高光有的地方锈断了。</summary>
+        static void RustyRun(Transform parent, Vector2 a, Vector2 dir, float len, System.Random rng)
+        {
+            float t = 0f, nextRing = 0.6f + (float)rng.NextDouble();
+            while (t < len)
+            {
+                float seg = Mathf.Min(len - t, 0.2f + (float)rng.NextDouble() * 0.6f);
+                Vector2 p = a + dir * t, q = a + dir * (t + seg);
+                var c = Jit(RustTones[rng.Next(RustTones.Length)], rng, 0.08f);
+                Iso.Face(parent, "Pipe", p, q, 0.09f, c, -30005, -0.2f, glow: true);
+                if (rng.NextDouble() > 0.2)                                              // 高光，五段里约有一段锈断
+                    Iso.Face(parent, "PipeHi", p, q, 0.025f, Jit(PipeHi, rng, 0.12f), -30004, -0.12f, glow: true);
+                if (rng.NextDouble() < 0.35)                                             // 亮锈斑
+                {
+                    float s0 = t + (float)rng.NextDouble() * seg * 0.7f, sl = 0.04f + (float)rng.NextDouble() * 0.1f;
+                    Iso.Face(parent, "PipeRust", a + dir * s0, a + dir * Mathf.Min(len, s0 + sl), 0.05f, Jit(RustBloom, rng, 0.1f), -30004, -0.19f + (float)rng.NextDouble() * 0.04f, glow: true);
+                }
+                t += seg;
+                if (t >= nextRing && t < len - 0.1f)                                     // 接口箍：比管子粗一圈、更暗
+                {
+                    Iso.Face(parent, "PipeRing", a + dir * t, a + dir * Mathf.Min(len, t + 0.06f), 0.13f, RustDark, -30003, -0.22f, glow: true);
+                    nextRing = t + 1.2f + (float)rng.NextDouble() * 1.2f;
+                }
+            }
+        }
+
+        /// <summary>黑色平台边缘上从水管往下流的锈迹：上面浓、往下渐淡，宽窄长短不一。</summary>
+        static void SlabStreaks(Transform parent, Vector2 a, Vector2 dir, float len, System.Random rng)
+        {
+            for (float t = 0.2f + (float)rng.NextDouble() * 0.5f; t < len - 0.1f; t += 0.35f + (float)rng.NextDouble() * 0.9f)
+            {
+                float w = 0.03f + (float)rng.NextDouble() * 0.08f;
+                float h = (Slab - 0.2f) * (0.3f + (float)rng.NextDouble() * 0.65f);      // 从水管下沿往下，不超过平台底边
+                var mr = Iso.Face(parent, "RustStreak", a + dir * t, a + dir * Mathf.Min(len, t + w), h, Color.white, -30008, -0.2f - h + 0.02f, glow: true);
+                var top = Jit(rng.NextDouble() < 0.7 ? Sprites.Hex("5a2c16") : Sprites.Hex("3e3226"), rng, 0.15f); top.a = 0.75f;
+                var bot = top; bot.a = 0f;
+                var mesh = mr.GetComponent<MeshFilter>().sharedMesh;
+                mesh.colors = new[] { bot, bot, top, top };                             // 顶点顺序：下 a、下 b、上 b、上 a
+            }
+        }
+
         const float P = 1f / 32f;                                                           // 1 个像素
         static Vector2 Snap(Vector2 v) => new Vector2(Mathf.Round(v.x * 32f) / 32f, Mathf.Round(v.y * 32f) / 32f);
 
@@ -69,7 +120,10 @@ namespace NeonDrift
         static void Downpipe(Transform parent, Vector2 top, float h, int r, bool big)
         {
             float x = top.x, y1 = top.y, y0 = top.y - h;
-            Box(parent, "PipeV", x - r * P, y0, x + r * P, y1, PipeCol, -30004);
+            var rr = new System.Random(Mathf.RoundToInt(x * 977 + y1 * 131));
+            Box(parent, "PipeV", x - r * P, y0, x + r * P, y1, Jit(RustTones[rr.Next(RustTones.Length)], rr, 0.08f), -30004);
+            for (float yy = y1 - 0.2f; yy > y0 + 0.1f; yy -= 0.25f + (float)rr.NextDouble() * 0.4f)      // 管身上的锈斑
+                if (rr.NextDouble() < 0.5) Box(parent, "PipeVRust", x - (r - 1) * P, yy - (1 + rr.Next(3)) * P, x + (rr.Next(2) == 0 ? r - 1 : r - 2) * P, yy, Jit(RustBloom, rr, 0.12f), -30003);
             Box(parent, "PipeVHi", x - (r - 1) * P, y0, x - (r - 2) * P, y1, PipeHi, -30003);          // 左侧一条高光
             Box(parent, "PipeVShade", x + (r - 2) * P, y0, x + r * P, y1, PipeDark, -30003);            // 右侧背光
             Box(parent, "PipeJoint", x - (r + 1) * P, y1 - 2 * P, x + (r + 1) * P, y1 + 2 * P, PipeRing, -30002);   // 和横管的接头
@@ -87,6 +141,7 @@ namespace NeonDrift
 
         static readonly Color FenceCol = Sprites.Hex("6a4028");
         static readonly Color FenceDark = Sprites.Hex("3e2618");
+        static readonly Color[] FenceTones = { Sprites.Hex("6a4028"), Sprites.Hex("5e3a26"), Sprites.Hex("74462a"), Sprites.Hex("4f3424"), Sprites.Hex("7a4a2c") };
 
         /// <summary>
         /// 一段破护栏（只是样子，碰撞另外加）。back = 在房子后面那一圈（排在房子底下），
@@ -107,9 +162,20 @@ namespace NeonDrift
                 double roll = rng.NextDouble();
                 const float Px = 1f / 64f;                                     // 高度参数里的 1 像素（会乘 Iso.S，再乘 32 像素/单位）
                 float sag = roll > 0.85 ? -5 * Px : 0f;                        // 撞弯的
-                Iso.Face(parent, "FenceLow", p, q, 3 * Px, FenceDark, order, 10 * Px, glow: true);
-                Iso.Face(parent, "FenceTop", p, q, 4 * Px, FenceCol, order + 1, 20 * Px + sag, glow: true);
-                Iso.Face(parent, "FencePost", p, Vector2.Lerp(p, q, 0.08f), 24 * Px, FenceDark, order + 2, 0f, glow: true);
+                // 做旧：每格颜色略有不同，偶尔一格是残留的灰色旧漆；横杆上有锈斑
+                Color top = rng.NextDouble() < 0.15 ? Jit(Sprites.Hex("4a4644"), rng, 0.1f) : Jit(FenceTones[rng.Next(FenceTones.Length)], rng, 0.08f);
+                Color dark = Jit(FenceDark, rng, 0.15f);
+                Iso.Face(parent, "FenceLow", p, q, 3 * Px, dark, order, 10 * Px, glow: true);
+                Iso.Face(parent, "FenceTop", p, q, 4 * Px, top, order + 1, 20 * Px + sag, glow: true);
+                Iso.Face(parent, "FencePost", p, Vector2.Lerp(p, q, 0.08f), 24 * Px, Jit(FenceDark, rng, 0.2f), order + 2, 0f, glow: true);
+                int spots = rng.Next(3);
+                for (int k = 0; k < spots; k++)
+                {
+                    float u0 = 0.1f + (float)rng.NextDouble() * 0.75f, ul = 0.05f + (float)rng.NextDouble() * 0.12f;
+                    bool onTop = rng.NextDouble() < 0.7;
+                    Iso.Face(parent, "FenceRust", Vector2.Lerp(p, q, u0), Vector2.Lerp(p, q, Mathf.Min(1f, u0 + ul)), (onTop ? 2 : 1) * Px,
+                             Jit(rng.NextDouble() < 0.6 ? RustBloom : Sprites.Hex("8e4c24"), rng, 0.12f), order + 3, (onTop ? 21 : 11) * Px + (onTop ? sag : 0f), glow: true);
+                }
             }
         }
 

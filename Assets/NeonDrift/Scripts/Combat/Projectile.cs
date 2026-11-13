@@ -27,24 +27,50 @@ namespace NeonDrift
             p.team = team; p.dir = dir.normalized; p.speed = speed; p.damage = damage;
             p.bounces = bounces; p.color = color; p.radius = radius; p.life = life;
             p.sr = go.AddComponent<SpriteRenderer>();
-            p.sr.sprite = Sprites.Circle(8);
+            p.sr.sprite = BulletSprite();                  // 6×3 像素的小弹头：一道亮芯 + 一圈颜色，按飞行方向转
             p.sr.sharedMaterial = Glow.Mat();              // 子弹自己发光
             p.sr.color = color;
             p.sr.sortingOrder = 5000;
-            float sc = radius * 2f / (8f / Sprites.PPU) * 1.4f;
-            go.transform.localScale = new Vector3(sc * 2.2f, sc * 0.8f, 1f);      // 拉成一道短短的曳光
             go.transform.right = p.dir;
-            var tr = go.AddComponent<TrailRenderer>();
-            tr.time = 0.07f;
-            tr.startWidth = radius * 1.6f; tr.endWidth = 0f;
+            var tr = go.AddComponent<TrailRenderer>();     // 很短很细的光尾
+            tr.time = 0.035f;
+            tr.startWidth = 2f / Sprites.PPU; tr.endWidth = 0f;
             tr.sharedMaterial = Glow.MeshMat();
-            var tc = color; tc.a = 0.7f;
+            var tc = color; tc.a = 0.5f;
             tr.startColor = tc; tr.endColor = new Color(color.r, color.g, color.b, 0f);
             tr.sortingOrder = 4999;
-            tr.numCapVertices = 2;
             tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             all.Add(p);
             return p;
+        }
+
+        static Sprite bullet;
+
+        /// <summary>
+        /// 简约的小子弹：6×3 像素，中间一行是白色亮芯（越靠前越亮），上下一行是浅灰外圈，被 sr.color 染成子弹的颜色。
+        /// 像素是硬边的，按 32 像素/单位，和场景一样大小。
+        /// </summary>
+        static Sprite BulletSprite()
+        {
+            if (bullet != null) return bullet;
+            const int w = 6, h = 3;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "bullet" };
+            var px = new Color32[w * h];
+            for (int x = 0; x < w; x++)
+            {
+                byte core = (byte)(150 + x * 21);                          // 尾部暗、弹头亮
+                px[1 * w + x] = new Color32(255, 255, 255, core);
+                if (x >= 1 && x <= 4)
+                {
+                    byte rim = (byte)(60 + x * 25);
+                    px[0 * w + x] = new Color32(200, 200, 200, rim);
+                    px[2 * w + x] = new Color32(200, 200, 200, rim);
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            bullet = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.7f, 0.5f), Sprites.PPU, 0, SpriteMeshType.FullRect);
+            return bullet;
         }
 
         public static void ClearAll()

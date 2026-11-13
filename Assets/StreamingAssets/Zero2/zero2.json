@@ -1,0 +1,33 @@
+{
+ "cell": [
+  240,
+  180
+ ],
+ "foot": 4,
+ "frames": {
+  "idle_s": 4,
+  "walk_s": 6,
+  "idle_e": 4,
+  "walk_e": 6,
+  "idle_n": 4,
+  "walk_n": 6,
+  "idle_w": 4,
+  "walk_w": 6,
+  "run_s": 6,
+  "run_e": 6,
+  "run_n": 6,
+  "run_w": 6,
+  "dash_e": 4,
+  "dash_s": 4,
+  "dash_n": 4,
+  "dash_w": 4,
+  "shoot_e": 8,
+  "shoot_w": 8,
+  "shoot_s": 8,
+  "shoot_n": 8,
+  "walkshoot_e": 12,
+  "walkshoot_w": 12,
+  "walkshoot_s": 12,
+  "walkshoot_n": 12
+ }
+}
