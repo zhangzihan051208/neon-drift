@@ -73,7 +73,7 @@ namespace NeonDrift
             if (target == null) return;
             Vector2 goal = target.position;
             var pc = target.GetComponent<PlayerController>();
-            if (pc != null) goal += Vector2.ClampMagnitude(pc.AimPoint - (Vector2)target.position, maxLead / aimLead) * aimLead;
+            if (pc != null) goal += Vector2.up * 0.9f + Vector2.ClampMagnitude(pc.AimPoint - (Vector2)target.position, maxLead / aimLead) * aimLead;      // 镜头对准人物腰部而不是脚底
             goal = Clamp(goal);
             smoothPos = Vector3.SmoothDamp(smoothPos, new Vector3(goal.x, goal.y, -10f), ref vel, smooth, Mathf.Infinity, Time.unscaledDeltaTime);
             var p = smoothPos;

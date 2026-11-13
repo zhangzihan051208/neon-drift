@@ -32,6 +32,15 @@ namespace NeonDrift
             return glowMat;
         }
 
+        static Material meshGlow;
+
+        /// <summary>没有自己贴图的东西（子弹拖尾）用的发光材质：自带白贴图，不和精灵共用。</summary>
+        public static Material MeshMat()
+        {
+            if (meshGlow == null) meshGlow = new Material(Mat()) { name = "MeshGlow", mainTexture = Texture2D.whiteTexture };
+            return meshGlow;
+        }
+
         static Material ReflMat()
         {
             if (reflMat == null)
@@ -162,7 +171,7 @@ namespace NeonDrift
         /// 给一个已经摆好的图挂上发光层、地面倒影和照到地上的灯。
         /// order：发光层的排序值；lights：最多放几盏灯；外加的渲染器会放进 extra，方便一起淡出。
         /// </summary>
-        public static void Attach(Transform host, Transform floorParent, Info info, bool flip, int order, int lights, List<SpriteRenderer> extra, System.Random rng, bool flicker = true, bool reflect = true)
+        public static void Attach(Transform host, Transform floorParent, Info info, bool flip, int order, int lights, List<SpriteRenderer> extra, System.Random rng, bool flicker = true, bool reflect = true, float scale = 1f)
         {
             if (info == null) return;
             var g = new GameObject("Glow").AddComponent<SpriteRenderer>();
@@ -175,14 +184,14 @@ namespace NeonDrift
             if (flicker && rng != null && rng.NextDouble() < 0.3) g.gameObject.AddComponent<NeonFlicker>();
 
             // 湿地倒影：以支点（底边）为轴往下翻，压扁一点，很淡
-            if (reflect) Reflect(floorParent, host.position, info, flip, extra);
+            if (reflect) Reflect(floorParent, host.position, info, flip, extra, 0f, scale);
 
             // 照到地上的灯：放在发光处正下方贴近地面的位置
             for (int i = 0; i < Mathf.Min(lights, info.spots.Count); i++)
             {
                 var s = info.spots[i];
-                float x = flip ? -s.x : s.x;
-                Vector2 pos = (Vector2)host.position + new Vector2(x, Mathf.Min(s.y, 1.2f) * 0.35f);
+                float x = (flip ? -s.x : s.x) * scale;
+                Vector2 pos = (Vector2)host.position + new Vector2(x, Mathf.Min(s.y * scale, 1.2f) * 0.35f);
                 float radius = Mathf.Clamp(1.4f + Mathf.Sqrt(s.z) * 0.25f, 1.8f, 3.5f);
                 var col = info.colors[i];
                 if (col.b > col.r + 0.1f || col.g > col.r + 0.25f) continue;          // 冷色的灯不放
@@ -190,12 +199,12 @@ namespace NeonDrift
             }
         }
 
-        public static void Reflect(Transform floorParent, Vector2 axis, Info info, bool flip, List<SpriteRenderer> extra, float yOffset = 0f)
+        public static void Reflect(Transform floorParent, Vector2 axis, Info info, bool flip, List<SpriteRenderer> extra, float yOffset = 0f, float scale = 1f)
         {
             var r = new GameObject("Reflection").AddComponent<SpriteRenderer>();
             r.transform.SetParent(floorParent, true);
             r.transform.position = axis;
-            r.transform.localScale = new Vector3(1f, 0.55f, 1f);
+            r.transform.localScale = new Vector3(scale, 0.55f * scale, 1f);
             r.sprite = info.sprite;
             r.flipX = flip;
             r.flipY = true;

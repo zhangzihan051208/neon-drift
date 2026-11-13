@@ -39,6 +39,30 @@ namespace NeonDrift
             }
         }
 
+        static Material meshUnlit, meshLit;
+
+        /// <summary>
+        /// 代码画的网格（护栏、平台侧面、水管）专用的材质，自带一张纯白贴图。
+        /// 不能和精灵共用同一个材质：网格自己没有贴图，共用时会采到上一张精灵图的颜色，于是同一条护栏一段亮一段暗、走动时还会变。
+        /// </summary>
+        public static Material MeshUnlit
+        {
+            get
+            {
+                if (meshUnlit == null) meshUnlit = new Material(Unlit) { name = "MeshUnlit", mainTexture = Texture2D.whiteTexture };
+                return meshUnlit;
+            }
+        }
+
+        public static Material MeshLit
+        {
+            get
+            {
+                if (meshLit == null) meshLit = new Material(Lit) { name = "MeshLit", mainTexture = Texture2D.whiteTexture };
+                return meshLit;
+            }
+        }
+
         /// <summary>白色方块，pivot 默认居中；feet=true 时 pivot 在底边中点。</summary>
         public static Sprite Box(int w, int h, bool feet = false)
         {

@@ -1,1 +1,1 @@
-{"pivotX": 0.5035, "pivotY": 0.0, "facadeTiles": 5}
+{"pivotX": 0.5035, "pivotY": 0.0, "facadeTiles": 5, "wind": [{"x": 198, "y": 60, "w": 66, "h": 42, "mode": "ripple", "amp": 2.0}, {"x": 10, "y": 72, "w": 85, "h": 40, "mode": "ripple", "amp": 1.5}, {"x": 252, "y": 98, "w": 36, "h": 40, "mode": "ripple", "amp": 1.5}]}

@@ -44,7 +44,7 @@ namespace NeonDrift
                 if (tele <= 0f)
                 {
                     Telegraph(false);
-                    Vector2 aim = ((Vector2)p.transform.position + Vector2.up * 0.8f - Center).normalized;
+                    Vector2 aim = ((Vector2)p.transform.position + Vector2.up * 1.5f - Center).normalized;
                     for (int i = 0; i < burst; i++)
                     {
                         float a = (i - (burst - 1) / 2f) * spread;

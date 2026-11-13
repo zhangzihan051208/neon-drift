@@ -12,7 +12,7 @@ namespace NeonDrift
     /// </summary>
     public class RoomDirector : MonoBehaviour
     {
-        public const int GateWidth = 3;
+        public const int GateWidth = 6;      // 门洞 6 格宽：人物放大后 3 格太窄，新的大门图也是按 6 格做的
 
         public int Wave { get; private set; }
         public int WaveCount { get; private set; }
@@ -134,6 +134,17 @@ namespace NeonDrift
             if (entrySide == Side.NE) entryGate = Gate(new Vector2(x0 + entryAt, y1), new Vector2(x0 + entryAt + GateWidth, y1), true);
             if (entrySide == Side.NW) entryGate = Gate(new Vector2(x1, y0 + entryAt), new Vector2(x1, y0 + entryAt + GateWidth), true);
             if (entryGate != null) entryGate.SetActive(false);
+            // 出口两边为了不挡视线没放房子的那几格，补一段矮墙把缺口封死（比人矮，不挡门和门后的路）
+            if (exitSide == Side.NE)
+            {
+                Wing(new Vector2(Mathf.Max(x0, x0 + exitAt - ExitClear), y0), new Vector2(x0 + exitAt, y0), rng);
+                Wing(new Vector2(x0 + exitAt + GateWidth, y0), new Vector2(Mathf.Min(x1, x0 + exitAt + GateWidth + ExitClearFront), y0), rng);
+            }
+            if (exitSide == Side.NW)
+            {
+                Wing(new Vector2(x0, Mathf.Max(y0, y0 + exitAt - ExitClear)), new Vector2(x0, y0 + exitAt), rng);
+                Wing(new Vector2(x0, y0 + exitAt + GateWidth), new Vector2(x0, Mathf.Min(y1, y0 + exitAt + GateWidth + ExitClearFront)), rng);
+            }
 
             // 出入口前留空，不放掩体
             if (exitSide == Side.NE) blocked.Add(new Rect(x0 + exitAt - 1, y0, GateWidth + 2, 4));
@@ -141,8 +152,8 @@ namespace NeonDrift
             if (entrySide == Side.NE) blocked.Add(new Rect(x0 + entryAt - 1, y1 - 5, GateWidth + 2, 5));
             if (entrySide == Side.NW) blocked.Add(new Rect(x1 - 5, y0 + entryAt - 1, 5, GateWidth + 2));
             if (entrySide == Side.None) blocked.Add(new Rect(x0, y1 - 6, 6, 6));           // 出生点
-            if (Index == 1) blocked.Add(new Rect(x0 + 4, y1 - 4, 4, 4));                     // 零的车
-            int covers = 3 + rng.Next(3);
+            if (Index == 1) blocked.Add(new Rect(x0 + 4, y1 - 8, 10, 8));                     // 零的车
+            int covers = 4 + rng.Next(4);                 // 房间变大了，掩体多放一两个
             for (int i = 0, tries = 0; i < covers && tries < 200; tries++)
             {
                 var coverSet = Props.Get("covers");
@@ -172,6 +183,7 @@ namespace NeonDrift
                 foreach (var b in blocked) if (b.Overlaps(r)) { hit = true; break; }
                 if (hit) continue;
                 bool barrel = i == 0;
+                FireLife barrelFire = null;
                 if (TooClose(barrel ? "firebarrel" : "lamp", new Vector2(lx, ly))) continue;
                 Mark(barrel ? "firebarrel" : "lamp", new Vector2(lx, ly));
                 blocked.Add(new Rect(lx - 1, ly - 1, 2, 2));
@@ -180,7 +192,11 @@ namespace NeonDrift
                 if (barrel && sprBarrel != null)
                 {
                     var bgo = Props.Place(t, sprBarrel, new Vector2(lx + 0.45f, ly + 0.45f), false, true);
-                    if (sprBarrel.fire.y >= 0f) Atmosphere.Fire(bgo.transform, (Vector2)bgo.transform.position + sprBarrel.fire);
+                    if (sprBarrel.fire.y >= 0f)
+                    {
+                        barrelFire = Atmosphere.Fire(bgo.transform, (Vector2)bgo.transform.position + sprBarrel.fire);
+                        foreach (var gsr in bgo.GetComponentsInChildren<SpriteRenderer>()) if (gsr.name == "Glow") barrelFire.glow = gsr;
+                    }
                 }
                 else if (!barrel && sprLamp != null) Props.Place(t, sprLamp, new Vector2(lx + 0.2f, ly + 0.2f), rng.Next(2) == 0, true);
                 else if (barrel)
@@ -198,13 +214,14 @@ namespace NeonDrift
                              Sprites.Hex("fff0c8"), Iso.Order(Iso.W(lx + 0.12f, ly + 0.12f).y) + 1, glow: true);
                 }
                 var lc = Sprites.Hex(barrel ? "ff7a2e" : lampCols[rng.Next(lampCols.Length)]);
-                Atmosphere.Lamp(t, Iso.W(lx + 0.2f, ly + 0.2f) + Vector2.up * (barrel ? 0.9f : 1.2f), lc, barrel ? 5f : 7f, barrel ? 1.3f : 1.1f, flicker: barrel);
+                var lampLight = Atmosphere.Lamp(t, Iso.W(lx + 0.2f, ly + 0.2f) + Vector2.up * (barrel ? 0.9f : 1.8f), lc, barrel ? 5f : 8f, barrel ? 1.3f : 1.1f, flicker: barrel);
+                if (barrelFire != null) barrelFire.lamp = lampLight.GetComponent<Flicker>();        // 火烧完，光也跟着暗下去
                 i++;
             }
 
             // 杂物：大多靠着后墙，不挡路也不挡子弹
             var junk = Props.Get("props").FindAll(e => e.name != "firebarrel" && e.name != "lamp");
-            for (int i = 0, tries = 0; junk.Count > 0 && i < 6 + rng.Next(4) && tries < 200; tries++)
+            for (int i = 0, tries = 0; junk.Count > 0 && i < 8 + rng.Next(5) && tries < 200; tries++)
             {
                 bool nearNE = rng.Next(2) == 0;
                 float px = nearNE ? x0 + 1.5f + (float)rng.NextDouble() * (gx - 3) : x0 + 0.6f + (float)rng.NextDouble() * 1.4f;
@@ -223,7 +240,7 @@ namespace NeonDrift
             if (Index == 1)
             {
                 var car = Props.Find("unique", "zero_car");
-                if (car != null) Props.Place(t, car, new Vector2(x0 + 6.8f, y1 - 1.2f), false, true);
+                if (car != null) Props.Place(t, car, new Vector2(x0 + 12.5f, y1 - 1.2f), false, true);
             }
             if (Index == 2)
             {
@@ -233,13 +250,13 @@ namespace NeonDrift
                     for (int tries = 0; tries < 60; tries++)
                     {
                         float bx2 = x0 + 2 + (float)rng.NextDouble() * (gx - 4), by2 = y0 + 1.2f;
-                        var r = new Rect(bx2 - 1.5f, by2 - 1.2f, 2f, 2f);
+                        var r = new Rect(bx2 - 2.2f, by2 - 1.2f, 3f, 3f);
                         bool hit = false;
                         foreach (var b in blocked) if (b.Overlaps(r)) { hit = true; break; }
                         if (hit) continue;
                         blocked.Add(r);
                         var go = Props.Place(t, booth, new Vector2(bx2, by2), false, true);
-                        Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 1.6f, Sprites.Hex("ffe2a8"), 3f, 1.2f, flicker: true);      // 电话亭里是暖黄的灯，不再发青光
+                        Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 2.4f, Sprites.Hex("ffe2a8"), 3.6f, 1.2f, flicker: true);      // 电话亭里是暖黄的灯，不再发青光
                         Atmosphere.Lamp(go.transform, (Vector2)go.transform.position + Vector2.up * 0.3f, Sprites.Hex("ffd27a"), 2f, 0.9f);
                         break;
                     }
@@ -272,18 +289,67 @@ namespace NeonDrift
             }
             // 出口后面的路是往画面上方斜着走的，挡住它的是缺口“靠前”那一侧（墙坐标更大的一侧）的房子：
             // 那一侧多空 2 格，接下来 6 格只放矮房子（车库、窝棚）
-            const float Clear = 1f, ClearFront = 3f, LowSpan = 6f;
+            const float Clear = ExitClear, ClearFront = ExitClearFront, LowSpan = 6f;
             float g0 = exitSide == Side.NE ? x0 + exitAt - Clear : float.MaxValue, g1 = exitSide == Side.NE ? x0 + exitAt + GateWidth + ClearFront : float.MaxValue;
             maxNE = Mathf.Max(maxNE, FillWall(set, x0, x1, g0, g1, false, x0, y0, rng, g1 + LowSpan));
             g0 = exitSide == Side.NW ? y0 + exitAt - Clear : float.MaxValue; g1 = exitSide == Side.NW ? y0 + exitAt + GateWidth + ClearFront : float.MaxValue;
             maxNW = Mathf.Max(maxNW, FillWall(set, y0, nwEnd, g0, g1, true, x0, y0, rng, g1 + LowSpan));
             // footY 是按 0.95 收缩过的进深；再加一点余量让房子完整落在平台上
-            BackNE = Mathf.Clamp(Mathf.CeilToInt(maxNE / 0.95f + 0.5f), 2, 8);
-            BackNW = Mathf.Clamp(Mathf.CeilToInt(maxNW / 0.95f + 0.5f), 2, 8);
+            BackNE = Mathf.Clamp(Mathf.CeilToInt(maxNE / 0.95f + 0.5f), 2, 12);
+            BackNW = Mathf.Clamp(Mathf.CeilToInt(maxNW / 0.95f + 0.5f), 2, 12);
+        }
+
+        const float ExitClear = 1f, ExitClearFront = 3f;            // 出口两边不放房子的宽度（格），这里改成矮墙
+
+        /// <summary>
+        /// 出口旁边的一段矮墙：混凝土墙脚 + 一截拼起来的锈铁皮，到人胸口高。
+        /// 和人的前后关系用 IsoBlock 按墙线判断（人在房间里 → 人在前；出口打开后走进门后的路 → 墙在前）。
+        /// </summary>
+        void Wing(Vector2 a, Vector2 b, System.Random rng)
+        {
+            float len = (b - a).magnitude;
+            if (len < 0.2f) return;
+            bool alongX = Mathf.Abs(a.y - b.y) < 0.001f;
+            var go = new GameObject("GateWing");
+            go.transform.SetParent(transform, false);
+            go.transform.position = Iso.W((a.x + b.x) / 2f, (a.y + b.y) / 2f);
+            var t = go.transform;
+            const float Px = 1f / 64f;                                            // 高度参数里的 1 像素
+            Color conc = Sprites.Hex("2a2f36"), concTop = Sprites.Hex("464e58"), concDark = Sprites.Hex("1b1f25");
+            Color[] sheet = { Sprites.Hex("5a3422"), Sprites.Hex("4a3a30"), Sprites.Hex("63402a"), Sprites.Hex("3c3530") };
+            Iso.Face(t, "WingBase", a, b, 26 * Px, conc, 0, 0f, glow: true);
+            Iso.Face(t, "WingFoot", a, b, 4 * Px, concDark, 1, 0f, glow: true);
+            Iso.Face(t, "WingCap", a, b, 3 * Px, concTop, 1, 26 * Px, glow: true);
+            Vector2 dir = (b - a) / len;
+            for (float s = 1f; s < len - 0.2f; s += 1f)                           // 浇筑缝
+                Iso.Face(t, "WingSeam", a + dir * s, a + dir * (s + 0.06f), 26 * Px, concDark, 2, 0f, glow: true);
+            // 上面一截铁皮：一块块宽窄不一、高低不齐，偶尔缺一块
+            for (float s = 0f; s < len - 0.1f;)
+            {
+                float w = Mathf.Min(len - s, 0.6f + (float)rng.NextDouble() * 0.7f);
+                if (rng.NextDouble() > 0.15)
+                {
+                    float h = (20 + rng.Next(14)) * Px;
+                    var c = sheet[rng.Next(sheet.Length)];
+                    Iso.Face(t, "WingSheet", a + dir * s, a + dir * (s + w), h, c, 3, 29 * Px, glow: true);
+                    var hi = c * 1.25f; hi.a = 1f;
+                    Iso.Face(t, "WingSheetTop", a + dir * s, a + dir * (s + w), 2 * Px, hi, 4, 29 * Px + h - 2 * Px, glow: true);
+                }
+                s += w;
+            }
+            for (float s = 0f; s <= len + 0.01f; s += Mathf.Max(0.5f, len / Mathf.Max(1, Mathf.Round(len / 1.5f))))   // 立柱
+                Iso.Face(t, "WingPost", a + dir * Mathf.Min(s, len - 0.08f), a + dir * Mathf.Min(s + 0.08f, len), 56 * Px, Sprites.Hex("2e2620"), 5, 0f, glow: true);
+            // 碰撞不用另加：后墙除了门洞本来就整条有碰撞
+            var sg = go.AddComponent<UnityEngine.Rendering.SortingGroup>();
+            float topY = Mathf.Max(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y);
+            sg.sortingOrder = Buildings.BackLayer + Iso.Order(topY) + 8;          // 平时和房子一层，人走近时由 IsoBlock 判断前后
+            var ib = go.AddComponent<IsoBlock>();
+            ib.x0 = Mathf.Min(a.x, b.x) - (alongX ? 0f : 0.15f); ib.x1 = Mathf.Max(a.x, b.x);
+            ib.y0 = Mathf.Min(a.y, b.y) - (alongX ? 0.15f : 0f); ib.y1 = Mathf.Max(a.y, b.y);
         }
 
         const float Overlap = 0.9f;
-        const float LowHeight = 7f;                                   // 高度不超过 7 个单位（224 像素）算矮房子                                   // 下一栋往前挪 10%，和上一栋稍微叠一点
+        const float LowHeight = 7f * Buildings.Scale;                 // 原图高度不超过 224 像素的算矮房子                                   // 下一栋往前挪 10%，和上一栋稍微叠一点
         static float Facade(Buildings.Entry e) => e.footX / 0.95f;    // 正面实际宽度（格）
 
         /// <summary>
@@ -304,7 +370,8 @@ namespace NeonDrift
                 {
                     var e = fit[rng.Next(fit.Count)];
                     float f = Facade(e);
-                    Vector2 front = nw ? new Vector2(x0, Mathf.Min(c + f, limit + 0.3f)) : new Vector2(Mathf.Min(c + f, limit + 0.3f), y0);
+                    float lim = limit < end ? limit : limit + 0.3f;                  // 挨着出口矮墙的那一栋不能伸进去
+                    Vector2 front = nw ? new Vector2(x0, Mathf.Min(c + f, lim)) : new Vector2(Mathf.Min(c + f, lim), y0);
                     Buildings.Place(transform, e, front, nw, rng);
                     maxDepth = Mathf.Max(maxDepth, e.footY);
                     last = e;
@@ -336,7 +403,8 @@ namespace NeonDrift
             Vector2 front = nw ? new Vector2(x0 - 0.3f, c + w) : new Vector2(c + w, y0 - 0.3f);
             var go = Props.Place(transform, pick, front, nw, false);
             Destroy(go.GetComponent<YSort>());
-            go.GetComponent<UnityEngine.Rendering.SortingGroup>().sortingOrder = Buildings.BackLayer + Iso.Order(go.transform.position.y) + 4;
+            Destroy(go.GetComponent<IsoBlock>());                     // 夹在房子之间的杂物永远排在房子那一层
+            go.GetComponent<UnityEngine.Rendering.SortingGroup>().sortingOrder = Buildings.BackLayer + Iso.Order(go.transform.position.y) + 6;
             return Mathf.Max(0.6f, w * 0.95f);
         }
 
@@ -370,12 +438,17 @@ namespace NeonDrift
             Iso.Edge(go, a, b);
             float y = front ? Mathf.Min(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y) - 0.05f : Mathf.Max(Iso.W(a.x, a.y).y, Iso.W(b.x, b.y).y) + 0.05f;
             // 出口用卷帘门，入口用电网；图里的门是沿 x = 常数 的边画的，沿 y = 常数 的边要翻转
-            var spr = Props.Find("gates", front ? "gate_fence" : "gate_shutter");
+            var spr = Props.Find("gates", front ? "gate_fence" : (Index % 2 == 1 ? "gate_shutter" : "gate_flood"));     // 出口：卷帘闸和防洪闸板轮着用
             if (spr != null)
             {
                 bool alongX = Mathf.Abs(a.y - b.y) < 0.001f;
                 Vector2 low = alongX ? new Vector2(Mathf.Max(a.x, b.x), a.y) : new Vector2(a.x, Mathf.Max(a.y, b.y));
-                Props.Place(go.transform, spr, low, alongX, false, shadow: false);
+                var placed = Props.Place(go.transform, spr, low, alongX, false, shadow: false);
+                // 门是一片薄板，按图的轮廓算出来的占地不准：直接用门所在的那条线（往里 0.15 格的厚度）
+                var ib = placed.GetComponent<IsoBlock>();
+                if (ib == null) ib = placed.AddComponent<IsoBlock>();
+                ib.x0 = Mathf.Min(a.x, b.x) - (alongX ? 0f : 0.15f); ib.x1 = Mathf.Max(a.x, b.x);
+                ib.y0 = Mathf.Min(a.y, b.y) - (alongX ? 0.15f : 0f); ib.y1 = Mathf.Max(a.y, b.y);
             }
             else
             {

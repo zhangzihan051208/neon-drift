@@ -13,7 +13,7 @@ namespace NeonDrift
 
         static readonly Vector2Int[] Sizes =
         {
-            new Vector2Int(20, 18), new Vector2Int(22, 16), new Vector2Int(18, 18), new Vector2Int(24, 14), new Vector2Int(16, 21),
+            new Vector2Int(27, 24), new Vector2Int(30, 22), new Vector2Int(25, 25), new Vector2Int(32, 20), new Vector2Int(22, 28),      // 人物和房子都放大了，街区整体加大约三分之一
         };
 
         static readonly Color StreetCol = Sprites.Hex("242c3a");
@@ -70,7 +70,7 @@ namespace NeonDrift
         }
 
         /// <summary>
-        /// 连接段：3 格宽的街道，从出口一直通到下一个街区的入口。
+        /// 连接段：和门一样宽的街道（RoomDirector.GateWidth 格），从出口一直通到下一个街区的入口。
         /// 起点那 inner 格穿过上一个街区放房子的那圈平台，那里不画护栏和平台边；其余部分两侧都围上护栏。
         /// </summary>
         void Street(int x0, int y0, int x1, int y1, bool alongY, int inner)
@@ -91,7 +91,10 @@ namespace NeonDrift
                     Platform.Fence(t, new Vector2(x0, y0), new Vector2(x0, y1 - inner), true, prng);     // 背面那侧
                 }
                 for (int j = y0; j < y1; j += 2)             // 路面中线
-                    Iso.Poly(t, "Lane", new[] { Iso.W(x0 + 1.45f, j), Iso.W(x0 + 1.55f, j), Iso.W(x0 + 1.55f, j + 1), Iso.W(x0 + 1.45f, j + 1) }, Sprites.Hex("8a7a3a"), -29990);
+                {
+                    float m = (x0 + x1) * 0.5f;                  // 路面中线放在正中
+                    Iso.Poly(t, "Lane", new[] { Iso.W(m - 0.05f, j), Iso.W(m + 0.05f, j), Iso.W(m + 0.05f, j + 1), Iso.W(m - 0.05f, j + 1) }, Sprites.Hex("8a7a3a"), -29990);
+                }
             }
             else
             {
@@ -104,7 +107,10 @@ namespace NeonDrift
                     Platform.Fence(t, new Vector2(x0, y0), new Vector2(x1 - inner, y0), true, prng);
                 }
                 for (int i = x0; i < x1; i += 2)
-                    Iso.Poly(t, "Lane", new[] { Iso.W(i, y0 + 1.45f), Iso.W(i + 1, y0 + 1.45f), Iso.W(i + 1, y0 + 1.55f), Iso.W(i, y0 + 1.55f) }, Sprites.Hex("8a7a3a"), -29990);
+                {
+                    float m = (y0 + y1) * 0.5f;
+                    Iso.Poly(t, "Lane", new[] { Iso.W(i, m - 0.05f), Iso.W(i + 1, m - 0.05f), Iso.W(i + 1, m + 0.05f), Iso.W(i, m + 0.05f) }, Sprites.Hex("8a7a3a"), -29990);
+                }
             }
         }
     }

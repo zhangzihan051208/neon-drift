@@ -21,7 +21,7 @@ namespace NeonDrift
             // 环境光：很暗的青蓝色，地面和墙只靠点光源照亮
             // 场景里已有 Global Light 2D 就直接调它（同一层不能有两个全局光）
             Light2D g = null;
-            foreach (var l in Object.FindObjectsByType<Light2D>(FindObjectsSortMode.None))
+            foreach (var l in Object.FindObjectsByType<Light2D>())
                 if (l.lightType == Light2D.LightType.Global) { g = l; break; }
             if (g == null)
             {
@@ -61,6 +61,8 @@ namespace NeonDrift
             var go = new GameObject("Light");
             go.transform.SetParent(parent, true);
             go.transform.position = pos;
+            var ls = go.transform.lossyScale;                 // 挂在放大过的图下面时把缩放抵消掉，灯的半径才是给定的值
+            if (Mathf.Abs(ls.x - 1f) > 0.01f) go.transform.localScale = new Vector3(go.transform.localScale.x / ls.x, go.transform.localScale.y / ls.y, 1f);
             var l = go.AddComponent<Light2D>();
             l.lightType = Light2D.LightType.Point;
             l.color = color;
@@ -73,7 +75,7 @@ namespace NeonDrift
         }
 
         /// <summary>火桶里会动的火：往上窜的火苗 + 零星火星。挂在火桶下面，跟着火桶一起排前后。</summary>
-        public static void Fire(Transform parent, Vector2 pos)
+        public static FireLife Fire(Transform parent, Vector2 pos)
         {
             var go = new GameObject("Fire");
             go.transform.SetParent(parent, true);
@@ -150,6 +152,19 @@ namespace NeonDrift
             sr.sortingOrder = 6;
             ps.Play();
             sp.Play();
+            var life = go.AddComponent<FireLife>();
+            life.flames = ps; life.sparks = sp;
+            return life;
+        }
+
+        static ParticleSystem rainPs;
+
+        /// <summary>来风时雨丝更斜。</summary>
+        public static void SetRainWind(float gust)
+        {
+            if (rainPs == null) return;
+            var vel = rainPs.velocityOverLifetime;
+            vel.xMultiplier = 1f + gust * 2.2f;
         }
 
         static void Rain(Camera cam)
@@ -181,9 +196,11 @@ namespace NeonDrift
             vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Stretch;
+            rainPs = ps;
+            Wind.Ensure();
             r.velocityScale = 0.016f;            // 雨丝短一点
             r.lengthScale = 1f;
-            r.sharedMaterial = Sprites.Unlit;
+            r.sharedMaterial = Sprites.MeshUnlit;
             r.sortingOrder = 32000;
             ps.Play();
         }
@@ -220,7 +237,7 @@ namespace NeonDrift
             col.color = grad;
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Billboard;
-            r.sharedMaterial = Sprites.Unlit;
+            r.sharedMaterial = Sprites.MeshUnlit;
             r.sortingOrder = -29000;      // 在地面之上、角色和墙之下
             ps.Play();
         }

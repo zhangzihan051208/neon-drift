@@ -10,7 +10,7 @@ namespace NeonDrift
         public float lungeSpeed = 13f;
         public float lungeTime = 0.16f;
         public float recover = 0.7f;
-        public float attackRange = 1.4f;
+        public float attackRange = 1.9f;
         public float damage = 1f;
 
         enum State { Chase, Windup, Lunge, Recover }

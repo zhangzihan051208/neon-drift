@@ -50,7 +50,7 @@ namespace NeonDrift
             if (parent != null) go.transform.SetParent(parent, true);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = glow ? Sprites.Unlit : Sprites.Lit;      // 发光的（窗、霓虹、闸门）不受灯光影响
+            mr.sharedMaterial = glow ? Sprites.MeshUnlit : Sprites.MeshLit;      // 发光的（窗、霓虹、闸门）不受灯光影响
             mr.sortingOrder = order;
             mr.shadowCastingMode = ShadowCastingMode.Off;
             mr.receiveShadows = false;
@@ -118,7 +118,7 @@ namespace NeonDrift
             if (parent != null) go.transform.SetParent(parent, true);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = Sprites.Unlit;
+            mr.sharedMaterial = Sprites.MeshUnlit;
             mr.sortingOrder = order;
             mr.shadowCastingMode = ShadowCastingMode.Off;
             mr.receiveShadows = false;

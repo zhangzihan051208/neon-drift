@@ -28,10 +28,21 @@ namespace NeonDrift
             p.bounces = bounces; p.color = color; p.radius = radius; p.life = life;
             p.sr = go.AddComponent<SpriteRenderer>();
             p.sr.sprite = Sprites.Circle(8);
-            p.sr.sharedMaterial = Sprites.Unlit;
+            p.sr.sharedMaterial = Glow.Mat();              // 子弹自己发光
             p.sr.color = color;
             p.sr.sortingOrder = 5000;
-            go.transform.localScale = Vector3.one * (radius * 2f / (8f / Sprites.PPU)) * 1.4f;
+            float sc = radius * 2f / (8f / Sprites.PPU) * 1.4f;
+            go.transform.localScale = new Vector3(sc * 2.2f, sc * 0.8f, 1f);      // 拉成一道短短的曳光
+            go.transform.right = p.dir;
+            var tr = go.AddComponent<TrailRenderer>();
+            tr.time = 0.07f;
+            tr.startWidth = radius * 1.6f; tr.endWidth = 0f;
+            tr.sharedMaterial = Glow.MeshMat();
+            var tc = color; tc.a = 0.7f;
+            tr.startColor = tc; tr.endColor = new Color(color.r, color.g, color.b, 0f);
+            tr.sortingOrder = 4999;
+            tr.numCapVertices = 2;
+            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             all.Add(p);
             return p;
         }
@@ -44,9 +55,10 @@ namespace NeonDrift
 
         void OnDestroy() => all.Remove(this);
 
-        void FixedUpdate()
+        void Update()
         {
-            float dt = Time.fixedDeltaTime;
+            float dt = Time.deltaTime;
+            if (dt <= 0f) return;
             life -= dt;
             if (life <= 0f) { Destroy(gameObject); return; }
 
@@ -62,6 +74,7 @@ namespace NeonDrift
                     if (h.Damage(damage, dir))
                     {
                         Effects.Sparks(hit.point, color, 6, 4f);
+                        Effects.Flash(hit.point, color, 2.2f, 1.2f, 0.07f);
                         if (team == Team.Player) CameraRig.Shake(0.05f);
                     }
                     Destroy(gameObject);
@@ -75,6 +88,7 @@ namespace NeonDrift
                     bounces--;
                     transform.position = hit.centroid + hit.normal * 0.02f;
                     dir = Vector2.Reflect(dir, hit.normal).normalized;
+                    transform.right = dir;
                     Effects.Sparks(hit.point, color, 3, 2.5f);
                     return;
                 }

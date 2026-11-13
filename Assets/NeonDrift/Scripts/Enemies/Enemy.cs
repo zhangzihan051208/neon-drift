@@ -17,7 +17,10 @@ namespace NeonDrift
 
         protected PlayerController Player => GameRoot.I != null ? GameRoot.I.Player : null;
         protected Vector2 Pos => transform.position;
-        protected Vector2 Center => (Vector2)transform.position + Vector2.up * 0.7f;
+        protected Vector2 Center => (Vector2)transform.position + Vector2.up * (BodyPixels.y * Size / Sprites.PPU * 0.5f);
+
+        /// <summary>灰盒敌人整体放大的倍数（主角放大以后，原来的敌人只到她腰）。</summary>
+        public const float Size = 1.8f;
 
         public static T Spawn<T>(Vector2 pos) where T : Enemy
         {
@@ -42,22 +45,25 @@ namespace NeonDrift
             rb.linearDamping = 0f;
 
             var feet = gameObject.AddComponent<CircleCollider2D>();
-            feet.radius = 0.32f;
+            feet.radius = 0.44f;
             feet.offset = new Vector2(0f, 0.25f);
             var hurt = gameObject.AddComponent<BoxCollider2D>();
             hurt.isTrigger = true;
-            float h = BodyPixels.y / (float)Sprites.PPU;
-            hurt.size = new Vector2(BodyPixels.x / (float)Sprites.PPU, h);
+            int bw = Mathf.RoundToInt(BodyPixels.x * Size), bh = Mathf.RoundToInt(BodyPixels.y * Size);
+            float h = bh / (float)Sprites.PPU;
+            hurt.size = new Vector2(bw / (float)Sprites.PPU, h);
             hurt.offset = new Vector2(0f, h / 2f);
 
             baseColor = BodyColor;
-            body = Sprites.Make(transform, "Body", Sprites.Box(BodyPixels.x, BodyPixels.y, feet: true), baseColor, 0, Vector2.zero);
-            Sprites.Make(transform, "Eyes", Sprites.Box(12, 3), Sprites.Hex("ff3b3b"), 1, new Vector2(0f, h - 0.3f));
+            body = Sprites.Make(transform, "Body", Sprites.Box(bw, bh, feet: true), baseColor, 0, Vector2.zero);
+            var eyes = Sprites.Make(transform, "Eyes", Sprites.Box(22, 5), Sprites.Hex("ff3b3b"), 1, new Vector2(0f, h - 0.5f));
+            eyes.sharedMaterial = Glow.Mat();                     // 红眼睛在暗处发光，远远就能看见敌人
             gameObject.AddComponent<YSort>();
+            GroundShadow.Attach(transform, bw / (float)Sprites.PPU * 1.6f);
 
             hp = gameObject.AddComponent<Health>();
             hp.Init(Team.Enemy, MaxHp);
-            hp.Damaged += (amt, dir) => { stun = 0.12f; rb.linearVelocity = dir.normalized * 5f; };
+            hp.Damaged += (amt, dir) => { stun = 0.12f; rb.linearVelocity = dir.normalized * 6.5f; };
             hp.Died += Die;
             OnBuilt();
         }

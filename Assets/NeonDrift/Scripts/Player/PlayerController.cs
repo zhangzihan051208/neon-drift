@@ -14,14 +14,14 @@ namespace NeonDrift
         public enum Dir { Down, Right, Up, Left }
 
         [Header("移动")]
-        public float moveSpeed = 6.5f;
-        public float sprintSpeed = 9.2f;
+        public float moveSpeed = 7.2f;
+        public float sprintSpeed = 10.2f;
         public float acceleration = 70f;
         [Tooltip("斜 45° 视角下，上下方向在屏幕上显得更短。1 = 不缩短")]
         public float verticalScale = 0.7f;
 
         [Header("闪移")]
-        public float dashSpeed = 20f;
+        public float dashSpeed = 23f;
         public float dashTime = 0.14f;
         public float dashCooldown = 0.45f;
 
@@ -56,7 +56,7 @@ namespace NeonDrift
         Transform gun;
         ZeroVisual visual;
         Vector2 move, dashDir;
-        float dashT, dashCd, fireCd, lastShotTime = -9f, lastMouseMove = -9f;
+        float dashT, dashCd, fireCd, lastShotTime = -9f, lastMouseMove = -9f, dashBuf, recoil, stepT;
         Vector2 lastMousePos;
         bool sprintHeld, shotVisual;
 
@@ -95,6 +95,7 @@ namespace NeonDrift
             gunSr = Sprites.Make(transform, "Gun", Sprites.Box(16, 5), Sprites.Hex("8a8f96"), 2, new Vector2(0f, 1.25f));
             gun = gunSr.transform;
             gameObject.AddComponent<YSort>();
+            GroundShadow.Attach(transform, 1.1f);
 
             hp = gameObject.AddComponent<Health>();
             hp.Init(Team.Player, maxHp, hurtIFrames: 0.9f);
@@ -124,6 +125,15 @@ namespace NeonDrift
 
             dashCd -= Time.deltaTime;
             fireCd -= Time.deltaTime;
+            dashBuf -= Time.deltaTime;
+            recoil = Mathf.MoveTowards(recoil, 0f, Time.deltaTime * 1.8f);
+            // 湿地上走路溅起一点水
+            if (move.sqrMagnitude > 0.01f && !IsDashing)
+            {
+                stepT -= Time.deltaTime;
+                if (stepT <= 0f) { stepT = sprintHeld ? 0.2f : 0.3f; Effects.Splash((Vector2)transform.position + Vector2.up * 0.1f, sprintHeld ? 3 : 2, 1.6f); }
+            }
+            else stepT = 0.1f;
             energy = Mathf.Min(maxEnergy, energy + energyRegen * Time.deltaTime);
         }
 
@@ -146,7 +156,7 @@ namespace NeonDrift
                 || (gp != null && gp.leftShoulder.isPressed);
 
             // 瞄准：鼠标 > 右摇杆 > 自动瞄准最近敌人
-            Vector2 origin = (Vector2)transform.position + Vector2.up * 1.0f;
+            Vector2 origin = (Vector2)transform.position + Vector2.up * 1.25f;      // 和枪口同高，子弹才会真的打向准星
             Vector2 aim = AimDir;
             if (ms != null)
             {
@@ -168,7 +178,7 @@ namespace NeonDrift
             else
             {
                 var e = Enemy.Nearest(origin, 12f);
-                if (e != null) aim = ((Vector2)e.transform.position + Vector2.up * 0.8f - origin).normalized;
+                if (e != null) aim = ((Vector2)e.transform.position + Vector2.up * 1.2f - origin).normalized;
                 else if (move.sqrMagnitude > 0.01f) aim = move.normalized;
                 AimPoint = origin + aim * 4f;
             }
@@ -180,7 +190,8 @@ namespace NeonDrift
 
             // 闪移
             bool dash = (kb != null && kb.spaceKey.wasPressedThisFrame) || (gp != null && gp.buttonSouth.wasPressedThisFrame);
-            if (dash && dashCd <= 0f && !IsDashing) StartDash();
+            if (dash) dashBuf = 0.15f;                    // 提前一点按也算：冷却一好马上闪
+            if (dashBuf > 0f && dashCd <= 0f && !IsDashing) { dashBuf = 0f; StartDash(); }
         }
 
         void Shoot()
@@ -193,6 +204,8 @@ namespace NeonDrift
             Vector2 d = Quaternion.Euler(0, 0, a) * AimDir;
             Projectile.Spawn(muzzle, d, Team.Player, bulletSpeed, bulletDamage, bulletBounces, Sprites.Hex("ffb347"));
             Effects.Sparks(muzzle, Sprites.Hex("ffd27a"), 2, 2f);
+            Effects.Flash(muzzle, Sprites.Hex("ffb347"), 3f, 1.5f, 0.06f);     // 枪口火光照亮周围一瞬
+            recoil = 0.2f;
             CameraRig.Shake(recoilShake);
             shotVisual = true;
         }
@@ -202,6 +215,8 @@ namespace NeonDrift
             dashDir = move.sqrMagnitude > 0.01f ? move.normalized : AimDir;
             dashT = dashTime;
             hp.invulnerable = true;
+            CameraRig.Shake(0.05f);
+            Effects.Splash((Vector2)transform.position + Vector2.up * 0.1f, 7, 3.2f);
         }
 
         void FixedUpdate()
@@ -249,7 +264,7 @@ namespace NeonDrift
             // 枪 360° 指向瞄准方向；朝上时画在身体后面
             float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
             gun.localRotation = Quaternion.Euler(0, 0, ang);
-            gun.localPosition = new Vector2(0f, 1.25f) + AimDir * 0.45f;
+            gun.localPosition = new Vector2(0f, 1.25f) + AimDir * (0.45f - recoil);      // 开枪后枪往回顶一下
             var gsr = gun.GetComponent<SpriteRenderer>();
             gsr.sortingOrder = Facing == Dir.Up ? -2 : 2;
             gsr.flipY = AimDir.x < 0f;

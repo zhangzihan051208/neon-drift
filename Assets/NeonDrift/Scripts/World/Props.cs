@@ -13,9 +13,13 @@ namespace NeonDrift
     public static class Props
     {
         [System.Serializable]
-        class Meta { public float pivotX = 0.5f; public float pivotY = 0f; public float foot = 0f; public string light = ""; public string unique = ""; public float fireX = 0f; public float fireY = -1f; }
+        class Meta { public float pivotX = 0.5f; public float pivotY = 0f; public float foot = 0f; public string light = ""; public string unique = ""; public float fireX = 0f; public float fireY = -1f; public WindRect[] wind; }
 
-        public class Entry { public string name; public Sprite sprite; public float foot; public string light; public string unique; public float footX, footY; public Vector2 fire = new Vector2(0f, -1f); public Glow.Info glow; }
+        /// <summary>图上会被风吹动的一块（图片像素坐标，左上角为原点）。mode：hang 挂着的 / top 立着的 / ripple 铺着的篷布。</summary>
+        [System.Serializable]
+        public class WindRect { public int x, y, w, h; public string mode = "hang"; public float amp = 1.5f; }
+
+        public class Entry { public string name; public Sprite sprite; public float foot; public string light; public string unique; public float footX, footY; public Vector2 fire = new Vector2(0f, -1f); public Glow.Info glow; public float scale = 1f; public WindRect[] wind; public Texture2D tex; public Vector2 pivot; }
 
         /// <summary>
         /// 从图的底部轮廓算出物件实际占地（格）：支点（最低点）是前角，
@@ -69,8 +73,15 @@ namespace NeonDrift
                     var sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(meta.pivotX, meta.pivotY), Sprites.PPU, 0, SpriteMeshType.FullRect);
                     string nm = Path.GetFileNameWithoutExtension(png);
                     sp.name = nm;
-                    var fp = meta.pivotY > 0.5f ? Vector2.zero : Footprint(tex, meta.pivotX);
-                    list.Add(new Entry { name = nm, sprite = sp, foot = meta.foot, light = meta.light ?? "", unique = meta.unique ?? "", footX = fp.x, footY = fp.y, fire = new Vector2(meta.fireX, meta.fireY) / Sprites.PPU,
+                    string cat0 = Path.GetFileName(dir);
+                    // 车和电话亭的碰撞按整个车身算（不往里收），再外扩一点，人不会贴着车身挤进车头车尾的图里
+                    var fp = meta.pivotY > 0.5f ? Vector2.zero : cat0 == "unique" ? Footprint(tex, meta.pivotX, 1f) * 1.1f : Footprint(tex, meta.pivotX);
+                    // 人物放大以后，场景里的东西跟着放大：车、电话亭、路灯 1.5 倍，掩体和杂物 1.2 倍；大门和桩子本来就是按新尺寸做的
+                    string cat = Path.GetFileName(dir);
+                    float sc = cat == "gates" || cat == "platform" ? 1f : cat == "unique" || nm == "lamp" ? 1.5f : 1.2f;
+                    fp *= sc;
+                    list.Add(new Entry { name = nm, sprite = sp, foot = meta.foot, light = meta.light ?? "", unique = meta.unique ?? "", footX = fp.x, footY = fp.y, fire = new Vector2(meta.fireX, meta.fireY < 0f ? -1f : meta.fireY * sc) / Sprites.PPU * new Vector2(sc, 1f),
+                                         scale = sc, wind = meta.wind, tex = tex, pivot = new Vector2(meta.pivotX, meta.pivotY),
                                          glow = Path.GetFileName(dir) == "decals" ? null : Glow.Extract(tex, new Vector2(meta.pivotX, meta.pivotY), 1) });
                     n++;
                 }
@@ -91,14 +102,22 @@ namespace NeonDrift
             sr.sprite = e.sprite;
             sr.flipX = flip;
             sr.sharedMaterial = Sprites.Unlit;          // 图里已经画好夜景的光
+            sr.transform.localScale = new Vector3(e.scale, e.scale, 1f);
+            Wind.Attach(sr.transform, e.tex, e.pivot, e.wind, flip, 5, Color.white, null);
             if (solid && e.footX > 0f) AddFoot(go, tile, flip ? e.footY : e.footX, flip ? e.footX : e.footY);
             go.AddComponent<SortingGroup>();
             go.AddComponent<YSort>().isStatic = true;
+            if (e.footX > 0f)
+            {
+                var ib = go.AddComponent<IsoBlock>();
+                float fx = flip ? e.footY : e.footX, fy = flip ? e.footX : e.footY;
+                ib.x1 = tile.x; ib.y1 = tile.y; ib.x0 = tile.x - fx; ib.y0 = tile.y - fy;
+            }
             if (shadow && e.footX > 0f) Shadow(parent, tile, flip ? e.footY : e.footX, flip ? e.footX : e.footY);
             // 发光部分（路灯灯罩、售货机屏幕、霓虹牌、电话亭、车灯、电网）；自己已经带灯的（路灯、火桶）不再加灯
             if (e.glow != null)
-                Glow.Attach(go.transform, parent, e.glow, flip, 10, string.IsNullOrEmpty(e.light) ? 1 : 0, null,
-                            new System.Random(Mathf.RoundToInt(tile.x * 97 + tile.y * 31)), flicker: e.unique == "");
+                Glow.Attach(sr.transform, parent, e.glow, flip, 10, string.IsNullOrEmpty(e.light) ? 1 : 0, null,
+                            new System.Random(Mathf.RoundToInt(tile.x * 97 + tile.y * 31)), flicker: e.unique == "", scale: e.scale);
             return go;
         }
 
@@ -154,6 +173,7 @@ namespace NeonDrift
             sr.transform.position = Iso.W(tile.x, tile.y);
             sr.sprite = e.sprite;
             sr.flipX = flip;
+            sr.transform.localScale = new Vector3(e.scale, e.scale, 1f);
             sr.sharedMaterial = Sprites.Unlit;
             sr.sortingOrder = order;
         }

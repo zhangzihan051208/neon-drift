@@ -12,7 +12,7 @@ namespace NeonDrift
         static readonly Color SlabCol = Sprites.Hex("141a22");
         static readonly Color PipeCol = Sprites.Hex("8a4a24");
         static readonly Color PipeHi = Sprites.Hex("b06a3a");
-        static readonly Color Water = new Color(0.37f, 0.50f, 0.42f, 0.45f);
+        static readonly Color Water = new Color(0.30f, 0.40f, 0.36f, 0.34f);
 
         public static void Edge(Transform parent, Vector2 a, Vector2 b, System.Random rng)
         {
@@ -43,15 +43,46 @@ namespace NeonDrift
                 }
             }
 
-            // 出水口：每隔 4–6 格一个，废水成片落到下面
+            // 排水管：每隔 4–6 格从沿边的横管上接一根竖管下来，末端一个朝外的弯头，废水从弯头口落下去
             for (float t = 1.5f + (float)rng.NextDouble() * 2f; t < len - 0.8f; t += 4f + (float)rng.NextDouble() * 2f)
             {
                 Vector2 tile = a + dir * t;
-                Vector2 p = Iso.W(tile.x, tile.y) + Vector2.down * (0.16f * Iso.S);
-                var mouth = Iso.Poly(parent, "Outlet", new[] { p + new Vector2(-0.12f, -0.06f), p + new Vector2(0.12f, -0.06f), p + new Vector2(0.12f, 0.06f), p + new Vector2(-0.12f, 0.06f) },
-                                     Sprites.Hex("060a0a"), -30003);
-                Drain(parent, p + Vector2.down * 0.05f);
+                Vector2 top = Snap(Iso.W(tile.x, tile.y) + Vector2.down * (0.13f * Iso.S));
+                bool big = rng.NextDouble() < 0.3;
+                float drop = Slab * Iso.S * (0.75f + (float)rng.NextDouble() * 0.9f);     // 有的只到板底，有的再往下伸一截
+                Downpipe(parent, top, Mathf.Round(drop * 32f) / 32f, big ? 4 : 3, big);
             }
+        }
+
+        const float P = 1f / 32f;                                                           // 1 个像素
+        static Vector2 Snap(Vector2 v) => new Vector2(Mathf.Round(v.x * 32f) / 32f, Mathf.Round(v.y * 32f) / 32f);
+
+        static void Box(Transform parent, string name, float x0, float y0, float x1, float y1, Color c, int order)
+        {
+            Iso.Poly(parent, name, new[] { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x1, y1), new Vector2(x0, y1) }, c, order, glow: true);
+        }
+
+        static readonly Color PipeDark = Sprites.Hex("532a14");
+        static readonly Color PipeRing = Sprites.Hex("6e3a1c");
+
+        /// <summary>一根竖直的锈水管：top 是接横管的位置，h 是长度，r 是半宽（像素）。</summary>
+        static void Downpipe(Transform parent, Vector2 top, float h, int r, bool big)
+        {
+            float x = top.x, y1 = top.y, y0 = top.y - h;
+            Box(parent, "PipeV", x - r * P, y0, x + r * P, y1, PipeCol, -30004);
+            Box(parent, "PipeVHi", x - (r - 1) * P, y0, x - (r - 2) * P, y1, PipeHi, -30003);          // 左侧一条高光
+            Box(parent, "PipeVShade", x + (r - 2) * P, y0, x + r * P, y1, PipeDark, -30003);            // 右侧背光
+            Box(parent, "PipeJoint", x - (r + 1) * P, y1 - 2 * P, x + (r + 1) * P, y1 + 2 * P, PipeRing, -30002);   // 和横管的接头
+            for (float y = y1 - 0.5f; y > y0 + 0.3f; y -= 0.55f)                                      // 管箍
+                Box(parent, "PipeBand", x - (r + 1) * P, y, x + (r + 1) * P, y + 2 * P, PipeRing, -30002);
+            // 弯头：比管身粗一圈，中间一个黑洞洞的口子朝着镜头
+            int e = r + 2;
+            float ey1 = y0 + 2 * P, ey0 = ey1 - (2 * e - 1) * P;
+            Box(parent, "Elbow", x - e * P, ey0, x + e * P, ey1, PipeRing, -30002);
+            Box(parent, "ElbowHi", x - e * P, ey1 - P, x + e * P, ey1, PipeHi, -30001);
+            Box(parent, "Mouth", x - (e - 2) * P, ey0 + P, x + (e - 2) * P, ey1 - 2 * P, Sprites.Hex("060a0a"), -30001);
+            Box(parent, "Slime", x - (e - 2) * P, ey0 - 3 * P, x - (e - 3) * P, ey0, new Color(0.22f, 0.30f, 0.20f, 1f), -30002);     // 口子下面挂着的一点苔
+            Drain(parent, new Vector2(x, ey0 - P), (e - 2) * 2 * P, big);
         }
 
         static readonly Color FenceCol = Sprites.Hex("6a4028");
@@ -82,7 +113,7 @@ namespace NeonDrift
             }
         }
 
-        static void Drain(Transform parent, Vector2 pos)
+        static void Drain(Transform parent, Vector2 pos, float width, bool big)
         {
             var go = new GameObject("Drain");
             go.transform.SetParent(parent, true);
@@ -93,19 +124,19 @@ namespace NeonDrift
             main.loop = true;
             main.startLifetime = 0.55f;
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.18f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, big ? 0.12f : 0.08f);
             main.startColor = Water;
             main.maxParticles = 80;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var em = ps.emission;
-            em.rateOverTime = 70f;
+            em.rateOverTime = big ? 90f : 55f;
             var sh = ps.shape;
             sh.shapeType = ParticleSystemShapeType.Box;
-            sh.scale = new Vector3(0.18f, 0.02f, 0.02f);
+            sh.scale = new Vector3(width, 0.02f, 0.02f);
             var vel = ps.velocityOverLifetime;
             vel.enabled = true;
             vel.space = ParticleSystemSimulationSpace.World;
-            vel.x = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+            vel.x = new ParticleSystem.MinMaxCurve(-0.06f, 0.06f);
             vel.y = new ParticleSystem.MinMaxCurve(-11f, -13f);
             vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             var col = ps.colorOverLifetime;
@@ -118,8 +149,8 @@ namespace NeonDrift
             r.renderMode = ParticleSystemRenderMode.Stretch;
             r.velocityScale = 0.05f;
             r.lengthScale = 1f;
-            r.sharedMaterial = Sprites.Unlit;
-            r.sortingOrder = -30002;
+            r.sharedMaterial = Sprites.MeshUnlit;
+            r.sortingOrder = -30001;
             ps.Play();
         }
     }

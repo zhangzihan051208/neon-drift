@@ -11,10 +11,13 @@ namespace NeonDrift
     public static class Buildings
     {
         [System.Serializable]
-        class Meta { public float pivotX = 0.5f; public float pivotY = 0f; public int facadeTiles = 4; public string unique = ""; }
+        class Meta { public float pivotX = 0.5f; public float pivotY = 0f; public int facadeTiles = 4; public string unique = ""; public Props.WindRect[] wind; }
+
+        /// <summary>房子整体放大的倍数：人物放大后，原来的门只到人物的腰，放大 1.5 倍后门和人差不多高。</summary>
+        public const float Scale = 1.3f;
 
         /// <summary>unique 为空的随机摆；"start" 只在第一个街区出生点旁边摆一次（回声诊所）。</summary>
-        public class Entry { public Sprite sprite; public int tiles; public string unique; public float footX, footY; public float height; public Glow.Info glow; }
+        public class Entry { public Sprite sprite; public int tiles; public string unique; public float footX, footY; public float height; public Glow.Info glow; public Props.WindRect[] wind; public Texture2D tex; public Vector2 pivot; }
 
         /// <summary>后墙和房子用的排序区间：比地面高，比所有角色和物件低。</summary>
         public const int BackLayer = -20000;
@@ -78,8 +81,9 @@ namespace NeonDrift
                     if (File.Exists(js)) JsonUtility.FromJsonOverwrite(File.ReadAllText(js), meta);
                     var sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(meta.pivotX, meta.pivotY), Sprites.PPU, 0, SpriteMeshType.FullRect);
                     sp.name = Path.GetFileNameWithoutExtension(png);
-                    var fp = Props.Footprint(tex, meta.pivotX, 0.95f, full: true);
-                    all.Add(new Entry { sprite = sp, tiles = Mathf.Max(1, meta.facadeTiles), unique = meta.unique ?? "", footX = fp.x, footY = fp.y, height = tex.height / (float)Sprites.PPU, glow = Glow.Extract(tex, new Vector2(meta.pivotX, meta.pivotY)) });
+                    var fp = Props.Footprint(tex, meta.pivotX, 0.95f, full: true) * Scale;
+                    all.Add(new Entry { sprite = sp, tiles = Mathf.Max(1, Mathf.CeilToInt(meta.facadeTiles * Scale)), unique = meta.unique ?? "", footX = fp.x, footY = fp.y, height = tex.height / (float)Sprites.PPU * Scale,
+                                        wind = meta.wind, tex = tex, pivot = new Vector2(meta.pivotX, meta.pivotY), glow = Glow.Extract(tex, new Vector2(meta.pivotX, meta.pivotY)) });
                 }
                 Debug.Log($"房子素材：读到 {all.Count} 张");
                 return all;
@@ -93,7 +97,10 @@ namespace NeonDrift
             go.transform.SetParent(parent, true);
             var p = Iso.W(frontTile.x, frontTile.y);
             go.transform.position = p;
-            var sr = go.AddComponent<SpriteRenderer>();
+            var art = new GameObject("Art");                       // 图和挂在图上的东西（发光层、灯牌、风吹的局部）一起放大
+            art.transform.SetParent(go.transform, false);
+            art.transform.localScale = new Vector3(Scale, Scale, 1f);
+            var sr = art.AddComponent<SpriteRenderer>();
             sr.sprite = e.sprite;
             sr.flipX = flip;
             sr.sharedMaterial = Sprites.Unlit;          // 图里已经画好了夜景的光
@@ -103,7 +110,8 @@ namespace NeonDrift
             var occ = go.AddComponent<Occluder>();               // 角色走到房子后面时房子变半透明
             occ.sr = sr;
             // 窗户、招牌发光，倒映在湿地上，照亮门口的地面；回声诊所的招牌是整条街唯一不闪的
-            Glow.Attach(go.transform, parent, e.glow, flip, sr.sortingOrder + 1, 2, occ.extra, rng, flicker: e.unique != "start");
+            Wind.Attach(art.transform, e.tex, e.pivot, e.wind, flip, sr.sortingOrder + 1, sr.color, occ.extra);
+            Glow.Attach(art.transform, parent, e.glow, flip, sr.sortingOrder + 2, 2, occ.extra, rng, flicker: e.unique != "start", scale: Scale);
             occ.front = frontTile;
             // 霓虹灯牌：高低错落（门头、墙角竖招牌、屋顶），让人一眼看出这是什么店
             var list = SignsOf(e.sprite.name);
@@ -117,19 +125,20 @@ namespace NeonDrift
                     float jy = (float)(rng.NextDouble() * 2 - 1) * (s.style == "roof" ? 1f : 6f);
                     Vector2 off = s.offset + new Vector2(jx, jy - jx * 0.5f) / Sprites.PPU;     // 沿正面错开时顺着 2:1 的斜度
                     var sg = new GameObject("Sign").AddComponent<SpriteRenderer>();
-                    sg.transform.SetParent(go.transform, false);
+                    sg.transform.SetParent(art.transform, false);
                     sg.transform.localPosition = new Vector3(flip ? -off.x : off.x, off.y, 0f);
                     sg.sprite = flip ? s.right : s.left;
                     sg.sharedMaterial = Sprites.Unlit;
-                    sg.sortingOrder = sr.sortingOrder + 2;
+                    sg.sortingOrder = sr.sortingOrder + 3;
+                    if (s.style == "blade") sg.gameObject.AddComponent<SignSway>();
                     occ.extra.Add(sg);
-                    Glow.Attach(sg.transform, parent, flip ? s.glowR : s.glowL, false, sr.sortingOrder + 3, 0, occ.extra, rng,
+                    Glow.Attach(sg.transform, parent, flip ? s.glowR : s.glowL, false, sr.sortingOrder + 4, 0, occ.extra, rng,
                                 flicker: e.unique != "start", reflect: false);
                     // 低处的招牌照亮门口的地面，并在湿地上留一道倒影
                     var gi = flip ? s.glowR : s.glowL;
-                    if (gi != null && off.y < 5f)
+                    if (gi != null && off.y * Scale < 7.5f)
                     {
-                        Vector2 foot = (Vector2)go.transform.position + new Vector2(flip ? -off.x : off.x, 0.4f);
+                        Vector2 foot = (Vector2)go.transform.position + new Vector2((flip ? -off.x : off.x) * Scale, 0.4f);
                         var c = gi.colors.Count > 0 ? gi.colors[0] : Color.white;
                         Atmosphere.Lamp(go.transform, foot, c, 2.6f, 0.6f);
                     }
