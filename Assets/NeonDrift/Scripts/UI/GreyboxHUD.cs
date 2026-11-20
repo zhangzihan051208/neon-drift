@@ -57,7 +57,7 @@ namespace NeonDrift
                 GUI.Label(new Rect(Screen.width - 260 * s, 10 * s, 250 * s, 20 * s), info, new GUIStyle(label) { alignment = TextAnchor.UpperRight });
             }
             GUI.Label(new Rect(Screen.width - 260 * s, 26 * s, 250 * s, 20 * s),
-                      $"射速 {p.fireRate:0.0}  伤害 {p.bulletDamage:0.00}  反弹 {p.bulletBounces}",
+                      $"{p.Weapon.name}  射速 {p.fireRate:0.0}  伤害 {p.bulletDamage:0.00}  反弹 {p.bulletBounces}   （1–9 换武器测试）",
                       new GUIStyle(label) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Normal });
 
             // 奖励名称

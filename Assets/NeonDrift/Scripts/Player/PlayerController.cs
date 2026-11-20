@@ -25,14 +25,14 @@ namespace NeonDrift
         public float dashTime = 0.14f;
         public float dashCooldown = 0.45f;
 
-        [Header("武器 · 「巷战」动能手枪")]
-        public float fireRate = 7f;
-        public float bulletSpeed = 22f;
-        public float bulletDamage = 1f;
-        public int bulletBounces = 1;
-        public float spreadDegrees = 3f;
+        // 当前武器（暂时用数字键 1–9 切换九类样板武器；之后换成两个武器槽 + 地上捡）
+        public WeaponDef Weapon { get; private set; } = Weapons.Test[0];
+        // 局内强化是倍率，换武器后仍然有效
+        float fireMul = 1f, dmgMul = 1f; int bounceAdd;
+        public float fireRate => Weapon.fireRate * fireMul;
+        public float bulletDamage => Weapon.damage * dmgMul;
+        public int bulletBounces => Weapon.bounces + (Weapon.melee == 0 ? bounceAdd : 0);
         public float energyCost = 0f;
-        public float recoilShake = 0.04f;
 
         [Header("能量（电量）")]
         public float maxEnergy = 100f;
@@ -207,7 +207,20 @@ namespace NeonDrift
             bool fire = (ms != null && ms.leftButton.isPressed) || (gp != null && gp.rightTrigger.ReadValue() > 0.4f);
             // 开枪时不能跑：按住射击、或者刚开过枪的 0.35 秒内，按着 Shift 也只是走
             if (fire || Time.time - lastShotTime < 0.35f) sprintHeld = false;
-            if (fire && fireCd <= 0f && energy >= energyCost && !IsDashing) Shoot();
+            if (fire && fireCd <= 0f && energy >= energyCost && !IsDashing) { if (Weapon.melee > 0) Melee(); else Shoot(); }
+
+            // 临时：数字键 1–9 切换九类样板武器，用来看各类武器的手感和特效
+            if (kb != null)
+                for (int k = 0; k < Weapons.Test.Length; k++)
+                {
+                    var key = kb[(UnityEngine.InputSystem.Key)((int)UnityEngine.InputSystem.Key.Digit1 + k)];
+                    if (key != null && key.wasPressedThisFrame && Weapon != Weapons.Test[k])
+                    {
+                        Weapon = Weapons.Test[k];
+                        fireCd = 0.15f;
+                        GreyboxHUD.Message($"{k + 1}  {Weapon.category} · {Weapon.name}", 1.5f);
+                    }
+                }
 
             // 闪移
             bool dash = (kb != null && kb.spaceKey.wasPressedThisFrame) || (gp != null && gp.buttonSouth.wasPressedThisFrame);
@@ -217,18 +230,91 @@ namespace NeonDrift
 
         void Shoot()
         {
+            var w = Weapon;
             fireCd = 1f / fireRate;
             energy -= energyCost;
             lastShotTime = Time.time;
             Vector2 muzzle = (Vector2)gun.position + AimDir * 0.8f;      // 画出来的枪口离身体约 1.25 个单位
-            float a = Random.Range(-spreadDegrees, spreadDegrees);
-            Vector2 d = Quaternion.Euler(0, 0, a) * AimDir;
-            Projectile.Spawn(muzzle, d, Team.Player, bulletSpeed, bulletDamage, bulletBounces, Sprites.Hex("ffb347"));
-            Effects.Sparks(muzzle, Sprites.Hex("ffd27a"), 2, 2f);
-            Effects.Flash(muzzle, Sprites.Hex("ffb347"), 3f, 1.5f, 0.06f);     // 枪口火光照亮周围一瞬
-            recoil = 0.2f;
-            CameraRig.Shake(recoilShake);
+            float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
+            for (int i = 0; i < w.pellets; i++)
+            {
+                float a = w.pellets > 1 ? Mathf.Lerp(-w.spread, w.spread, (i + Random.value * 0.6f) / w.pellets) : Random.Range(-w.spread, w.spread);
+                Vector2 d = Quaternion.Euler(0, 0, a) * AimDir;
+                float spd = w.speed * (w.pellets > 1 ? Random.Range(0.85f, 1.1f) : 1f);
+                Projectile.Spawn(muzzle, d, Team.Player, spd, bulletDamage, bulletBounces, w.color, w.bullet, w.radius, w.life, w.trail,
+                                 w.pierce, w.explode, w.explodeDamage * dmgMul);
+            }
+            if (w.muzzle > 0)
+            {
+                PixelFx.Play(PixelFx.Muzzle(w.muzzle), muzzle, ang, w.color, 30f, 6000, false, transform);   // 像素枪口火光，跟着人走
+                Effects.Flash(muzzle, w.color, 2f + w.muzzle * 0.2f, 1.5f, 0.06f);                          // 枪口火光照亮周围一瞬
+            }
+            else if (Random.value < 0.25f) Effects.Flash(muzzle, w.color, 3f, 0.8f, 0.08f);               // 火焰喷射器：持续的暖光
+            recoil = Mathf.Min(0.3f, 0.06f + w.shake);
+            CameraRig.Shake(w.shake);
             shotVisual = true;
+        }
+
+        bool swingFlip;
+
+        /// <summary>
+        /// 近战。刀：身前一道扇形刀光，扇形里的敌人受伤，敌人的子弹被劈碎；来回两刀方向相反。
+        /// 钝器：往前砸地，落点一圈冲击波，圈里的敌人受重击并被击退，震屏 + 顿帧。
+        /// </summary>
+        void Melee()
+        {
+            var w = Weapon;
+            fireCd = 1f / fireRate;
+            lastShotTime = Time.time;
+            Vector2 chest = (Vector2)transform.position + Vector2.up * 1.1f;
+            float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
+            int hits = 0;
+            if (w.melee == 1)
+            {
+                swingFlip = !swingFlip;
+                int rpx = Mathf.RoundToInt(w.range * Sprites.PPU * 0.85f);
+                PixelFx.Play(PixelFx.Slash(rpx, w.arc), chest, ang, w.color, 26f, 6000, swingFlip, transform);
+                foreach (var e in Enemy.All.ToArray())
+                {
+                    if (e == null) continue;
+                    Vector2 d = (Vector2)e.transform.position + Vector2.up * 0.7f - chest;
+                    if (d.magnitude > w.range + 0.3f || Vector2.Angle(AimDir, d) > w.arc * 0.5f) continue;
+                    var h = e.GetComponent<Health>();
+                    if (h != null && h.Damage(bulletDamage, d.normalized))
+                    {
+                        hits++;
+                        PixelFx.Play(PixelFx.Impact(5), (Vector2)e.transform.position + Vector2.up * 0.8f, 45f, w.color, 26f);
+                    }
+                }
+                int cut = Projectile.CutInArc(chest, AimDir, w.range + 0.2f, w.arc, Team.Player);
+                if (cut > 0) Effects.Flash(chest + AimDir, Color.white, 2.5f, 1.2f, 0.06f);
+                CameraRig.Shake(hits > 0 ? w.shake * 2f : w.shake);
+                if (hits > 0) GameRoot.Hitstop(0.03f);
+            }
+            else
+            {
+                Vector2 at = (Vector2)transform.position + AimDir * w.range * 0.75f + Vector2.up * 0.1f;
+                int rpx = Mathf.RoundToInt(w.range * Sprites.PPU * 0.9f);
+                PixelFx.Play(PixelFx.Smash(rpx), at, 0f, w.color, 22f, -29950);           // 贴着地面，在人物和物件下面
+                Effects.Flash(at, w.color, 3.5f, 1.6f, 0.1f);
+                Effects.Splash(at, 10, 4f);
+                foreach (var e in Enemy.All.ToArray())
+                {
+                    if (e == null) continue;
+                    Vector2 d = (Vector2)e.transform.position - at;
+                    if (d.magnitude > w.range) continue;
+                    var h = e.GetComponent<Health>();
+                    if (h != null && h.Damage(bulletDamage, (d.sqrMagnitude > 0.001f ? d.normalized : AimDir) * 2f))
+                    {
+                        hits++;
+                        PixelFx.Play(PixelFx.Impact(6), (Vector2)e.transform.position + Vector2.up * 0.8f, 0f, w.color, 22f);
+                        var erb = e.GetComponent<Rigidbody2D>();
+                        if (erb != null) erb.linearVelocity = (d.sqrMagnitude > 0.001f ? d.normalized : AimDir) * 11f;   // 钝器：重击退
+                    }
+                }
+                CameraRig.Shake(w.shake);
+                GameRoot.Hitstop(hits > 0 ? 0.06f : 0.025f);
+            }
         }
 
         void StartDash()
@@ -298,10 +384,10 @@ namespace NeonDrift
         {
             switch (r)
             {
-                case RewardType.FireRate: fireRate *= 1.2f; break;
-                case RewardType.Bounce: bulletBounces += 1; break;
+                case RewardType.FireRate: fireMul *= 1.2f; break;
+                case RewardType.Bounce: bounceAdd += 1; break;
                 case RewardType.MaxHp: maxHp += 1; hp.max = maxHp; hp.Heal(maxHp); break;
-                case RewardType.Damage: bulletDamage *= 1.25f; break;
+                case RewardType.Damage: dmgMul *= 1.25f; break;
             }
         }
     }
