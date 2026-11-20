@@ -16,11 +16,24 @@ namespace NeonDrift
 
         public int Wave { get; private set; }
         public int WaveCount { get; private set; }
-        public int Alive { get; private set; }
+        /// <summary>房间里还剩几个敌对单位（倒戈的不算）。</summary>
+        public int Alive
+        {
+            get
+            {
+                int n = 0;
+                foreach (var e in Enemy.All) if (e != null && !e.Allied && e.transform.parent == transform) n++;
+                return n;
+            }
+        }
         public bool Cleared { get; private set; }
         public bool Started { get; private set; }
         public int Index { get; private set; }
         public bool IsLast { get; private set; }
+        public RoomKind Kind { get; private set; }
+        public string EventName { get; private set; }
+        RoomKind[] exits = new RoomKind[0];
+        readonly List<float> ladderAt = new List<float>();       // 每把梯子在后墙（y = by）上的起始格
 
         // 街区在全局格子坐标里的范围，以及出入口
         public int bx, by, gx, gy;
@@ -51,7 +64,8 @@ namespace NeonDrift
         const float WallH = 1.7f;
 
         public static RoomDirector Build(Transform parent, int index, bool isLast, int bx, int by, int gx, int gy,
-                                         Side entrySide, int entryAt, Side exitSide, int exitAt, PlayerController player, System.Random rng)
+                                         Side entrySide, int entryAt, Side exitSide, int exitAt, PlayerController player, System.Random rng,
+                                         RoomKind kind = RoomKind.Combat, RoomKind[] exits = null)
         {
             var go = new GameObject($"Block {index}");
             go.transform.SetParent(parent, false);
@@ -59,6 +73,8 @@ namespace NeonDrift
             rd.Index = index; rd.IsLast = isLast; rd.player = player;
             rd.bx = bx; rd.by = by; rd.gx = gx; rd.gy = gy;
             rd.entrySide = entrySide; rd.entryAt = entryAt; rd.exitSide = exitSide; rd.exitAt = exitAt;
+            rd.Kind = kind; rd.exits = exits ?? new RoomKind[0];
+            for (int i = 0; i < rd.exits.Length; i++) rd.ladderAt.Add(bx + gx * (i + 1f) / (rd.exits.Length + 1f) - 0.6f);
             rd.Generate(rng);
             return rd;
         }
@@ -153,7 +169,9 @@ namespace NeonDrift
             if (entrySide == Side.NW) blocked.Add(new Rect(x1 - 5, y0 + entryAt - 1, 5, GateWidth + 2));
             if (entrySide == Side.None) blocked.Add(new Rect(x0, y1 - 6, 6, 6));           // 出生点
             if (Index == 1) blocked.Add(new Rect(x0 + 4, y1 - 8, 10, 8));                     // 零的车
-            int covers = 4 + rng.Next(4);                 // 房间变大了，掩体多放一两个
+            foreach (var la in ladderAt) blocked.Add(new Rect(la - 1.5f, y0, 4.2f, 4));        // 梯子前面留空
+            if (Kind != RoomKind.Combat) blocked.Add(new Rect(x0 + gx / 2f - 6, y0 + gy / 2f - 5, 12, 10));     // 货架 / 事件摆在正中
+            int covers = Kind == RoomKind.Combat ? 4 + rng.Next(4) : 1 + rng.Next(2);                 // 房间变大了，掩体多放一两个
             for (int i = 0, tries = 0; i < covers && tries < 200; tries++)
             {
                 var coverSet = Props.Get("covers");
@@ -263,7 +281,28 @@ namespace NeonDrift
                 }
             }
 
+            if (Kind == RoomKind.Combat) PlaceShockPuddles(rng);
             WaveCount = Mathf.Min(4, 2 + (Index - 1) / 2);
+        }
+
+        /// <summary>积水区：每间小怪房 1–2 个漏电水坑（第一间只放 1 个），旁边倒着变电箱。</summary>
+        void PlaceShockPuddles(System.Random rng)
+        {
+            int want = Index == 1 ? 1 : 1 + rng.Next(2);
+            for (int i = 0, tries = 0; i < want && tries < 150; tries++)
+            {
+                float px = bx + 5 + (float)rng.NextDouble() * (gx - 10), py = by + 5 + (float)rng.NextDouble() * (gy - 10);
+                var pr = new Rect(px - 2.6f, py - 2.6f, 5.2f, 5.2f);
+                var box = new Vector2(Mathf.Round(px - 3.6f), Mathf.Round(py - 1.2f));      // 变电箱在水坑左后方
+                var br = new Rect(box.x - 0.5f, box.y - 0.5f, 2f, 2f);
+                if (box.x < bx + 1 || box.y < by + 1) continue;
+                bool hit = false;
+                foreach (var b in blocked) if (b.Overlaps(pr) || b.Overlaps(br)) { hit = true; break; }
+                if (hit) continue;
+                blocked.Add(pr); blocked.Add(br);
+                ShockPuddle.Build(transform, new Vector2(px, py), box, rng);
+                i++;
+            }
         }
 
         /// <summary>房子后面那一圈平台的深度（格），按实际摆上去的房子最深的那栋算。</summary>
@@ -291,7 +330,10 @@ namespace NeonDrift
             // 那一侧多空 2 格，接下来 6 格只放矮房子（车库、窝棚）
             const float Clear = ExitClear, ClearFront = ExitClearFront, LowSpan = 6f;
             float g0 = exitSide == Side.NE ? x0 + exitAt - Clear : float.MaxValue, g1 = exitSide == Side.NE ? x0 + exitAt + GateWidth + ClearFront : float.MaxValue;
-            maxNE = Mathf.Max(maxNE, FillWall(set, x0, x1, g0, g1, false, x0, y0, rng, g1 + LowSpan));
+            // 梯子那几段：房子之间留出缺口，梯子和它背后的墙就嵌在缺口里，不再盖在房子上
+            var ladderGaps = new List<Vector2>();
+            foreach (var la in ladderAt) ladderGaps.Add(new Vector2(la - LadderArt.LadderOffset, la - LadderArt.LadderOffset + LadderArt.WallTiles));
+            maxNE = Mathf.Max(maxNE, FillWall(set, x0, x1, g0, g1, false, x0, y0, rng, g1 + LowSpan, ladderGaps));
             g0 = exitSide == Side.NW ? y0 + exitAt - Clear : float.MaxValue; g1 = exitSide == Side.NW ? y0 + exitAt + GateWidth + ClearFront : float.MaxValue;
             maxNW = Mathf.Max(maxNW, FillWall(set, y0, nwEnd, g0, g1, true, x0, y0, rng, g1 + LowSpan));
             // footY 是按 0.95 收缩过的进深；再加一点余量让房子完整落在平台上
@@ -355,14 +397,23 @@ namespace NeonDrift
         /// <summary>
         /// 沿一面墙从 start 排到 end（格子坐标：NE 墙是 x，NW 墙是 y），跳过 [g0, g1) 出口段。返回这面墙上房子最深的进深。
         /// </summary>
-        float FillWall(List<Buildings.Entry> set, float start, float end, float g0, float g1, bool nw, int x0, int y0, System.Random rng, float lowUntil = float.MinValue)
+        /// <summary>后墙（右上那面）上摆好的房子：x = 起点格，y = 终点格，z = 高度（单位）。用来给梯子的墙定高度。</summary>
+        readonly List<Vector3> neSpans = new List<Vector3>();
+
+        float FillWall(List<Buildings.Entry> set, float start, float end, float g0, float g1, bool nw, int x0, int y0, System.Random rng, float lowUntil = float.MinValue, List<Vector2> extraGaps = null)
         {
             float c = start, maxDepth = 0f;
             Buildings.Entry last = null;                                   // 紧挨着的两栋不能一样
+            var gaps = new List<Vector2>();
+            if (g0 < float.MaxValue) gaps.Add(new Vector2(g0, g1));
+            if (extraGaps != null) gaps.AddRange(extraGaps);
             while (c < end - 0.5f)
             {
-                if (c >= g0 && c < g1) { c = g1; last = null; continue; }
-                float limit = c < g0 ? Mathf.Min(g0, end) : end;
+                bool skip = false;
+                foreach (var g in gaps) if (c >= g.x && c < g.y) { c = g.y; last = null; skip = true; break; }
+                if (skip) continue;
+                float limit = end;
+                foreach (var g in gaps) if (g.x > c) limit = Mathf.Min(limit, g.x);
                 float room = limit - c;
                 bool lowOnly = c >= g1 && c < lowUntil;
                 var fit = set.FindAll(b => b != last && Facade(b) * Overlap <= room + 0.3f && (!lowOnly || b.height <= LowHeight));
@@ -373,6 +424,7 @@ namespace NeonDrift
                     float lim = limit < end ? limit : limit + 0.3f;                  // 挨着出口矮墙的那一栋不能伸进去
                     Vector2 front = nw ? new Vector2(x0, Mathf.Min(c + f, lim)) : new Vector2(Mathf.Min(c + f, lim), y0);
                     Buildings.Place(transform, e, front, nw, rng);
+                    if (!nw) neSpans.Add(new Vector3(c, Mathf.Min(c + f, lim), e.height));
                     maxDepth = Mathf.Max(maxDepth, e.footY);
                     last = e;
                     c += f * Overlap;
@@ -477,6 +529,17 @@ namespace NeonDrift
         void Begin()
         {
             Started = true;
+            if (Kind != RoomKind.Combat)
+            {
+                Cleared = true;
+                if (Kind == RoomKind.Shop) SetupShop();
+                else if (Kind == RoomKind.Signal) Invasion(new Vector2(0f, -1.4f), 3);
+                else SetupEvent();
+                GameRoot.I.EnterRoom(this);
+                if (IsLast) SpawnProtocols();
+                SpawnLadders();
+                return;
+            }
             if (entryGate != null) entryGate.SetActive(true);
             GameRoot.I.EnterRoom(this);
             StartCoroutine(RunWaves());
@@ -509,12 +572,33 @@ namespace NeonDrift
                 }
                 yield return new WaitForSeconds(0.7f);
                 foreach (var m in markers) Destroy(m);
-                foreach (var s in spots)
+                // 编队：近战为主，远程（枪手、炮台）最多三分之一，而且只跟着近战一起出现；
+                // 离玩家近的位置刷近战，远的位置刷远程，让近战顶在前面
+                spots.Sort((a, b) => Vector2.Distance(a, player.transform.position).CompareTo(Vector2.Distance(b, player.transform.position)));
+                int ranged = Index == 1 && Wave == 1 ? 0 : Mathf.Min(spots.Count / 3, 1 + (Index - 1) / 2);
+                if (spots.Count - ranged < 1) ranged = Mathf.Max(0, spots.Count - 1);
+                bool turret = Wave == 1 && Index >= 2;                       // 第 2 间开始，第一波的远程里有一座炮台（能被骇入策反）
+                if (turret && ranged == 0 && spots.Count > 1) ranged = 1;
+                int brutes = 0;
+                for (int k = 0; k < spots.Count; k++)
                 {
-                    Enemy e = rng.NextDouble() < 0.38 ? (Enemy)Enemy.Spawn<GunnerEnemy>(s) : Enemy.Spawn<ScavengerEnemy>(s);
+                    var s = spots[k];
+                    Enemy e;
+                    if (k >= spots.Count - ranged)
+                    {
+                        e = turret ? Enemy.Spawn<TurretEnemy>(s) : Enemy.Spawn<GunnerEnemy>(s);
+                        turret = false;
+                    }
+                    else
+                    {
+                        double r = rng.NextDouble();
+                        if (Index >= 2 && r < 0.2 && brutes < 1 + Index / 3) { e = Enemy.Spawn<BruteEnemy>(s); brutes++; }
+                        else if (Index >= 2 && r < 0.5) e = Enemy.Spawn<StabberEnemy>(s);
+                        else e = Enemy.Spawn<ScavengerEnemy>(s);
+                    }
                     e.transform.SetParent(transform, true);
-                    Alive++;
                 }
+                if (Wave == 1) Protocols.OnFirstWave(this);
                 while (Alive > 0) yield return null;
                 yield return new WaitForSeconds(0.5f);
             }
@@ -522,22 +606,214 @@ namespace NeonDrift
             Clear();
         }
 
-        public void OnEnemyKilled(Enemy e) => Alive = Mathf.Max(0, Alive - 1);
+        public void OnEnemyKilled(Enemy e) { }
 
         void Clear()
         {
             Cleared = true;
-            Projectile.ClearAll();
+            Projectile.ClearAll(keepThrown: true);              // 还在飞的投掷物落在原地，可以捡回来
+            player.OnRoomCleared();
+            foreach (var e in Enemy.All.ToArray()) if (e != null && e.Allied && e.transform.parent == transform) e.Dismiss();   // 倒戈的单位断电下线
             if (exitGate != null) exitGate.SetActive(false);
-            var pool = new List<RewardType> { RewardType.FireRate, RewardType.Bounce, RewardType.MaxHp, RewardType.Damage };
-            for (int i = 0; i < 3; i++)
+            Chest.Spawn(transform, Center + (IsLast ? new Vector2(0f, -1.6f) : Vector2.zero));
+            if (IsLast) SpawnProtocols();
+            SpawnLadders();
+            if (IsLast) { }                                         // 入侵台词由 Invasion 显示
+            else if (exits.Length > 1) GreyboxHUD.Message("Cleared. Open the crate. Four ladders: combat, black market, event, ghost channel — pick one", 4.5f);
+            else GreyboxHUD.Message("Cleared. Open the crate, then climb the ladder on the back wall", 3.5f);
+        }
+
+        /// <summary>第一部分结束：幽灵频道入侵，一个 AI 拿出它的三个协议。</summary>
+        void SpawnProtocols() => Invasion(new Vector2(0f, 1.2f), 1);
+
+        /// <summary>幽灵频道入侵：画面抖一下、冒故障块，AI 说一句话，摆出三个协议（拿一个，其余消失）。</summary>
+        void Invasion(Vector2 offset, int group)
+        {
+            var list = Protocols.Offer(new System.Random(), player, out int ai);
+            if (list.Count == 0) return;
+            for (int i = 0; i < list.Count; i++)
             {
-                var r = pool[Random.Range(0, pool.Count)];
-                pool.Remove(r);
-                Pickup.Spawn(transform, Center + new Vector2((i - 1) * 2f, 0f), r);
+                Vector2 at = Center + offset + new Vector2((i - 1) * 3.4f, 0f);
+                Pickup.Spawn(transform, at, list[i], group);
+                PixelFx.Play(PixelFx.Glitch(14), at, 0f, Protocols.AiColor[list[i].ai], 14f);
             }
-            if (IsLast) GameRoot.I.OnRunComplete();
-            else GreyboxHUD.Message(exitSide == Side.NE ? "街区清理完毕：拿一个奖励，出口在右上方" : "街区清理完毕：拿一个奖励，出口在左上方", 4f);
+            CameraRig.Shake(0.12f);
+            Effects.Flash(Center + offset, Protocols.AiColor[ai], 6f, 1.5f, 0.25f);
+            GreyboxHUD.Message($"GHOST CHANNEL BREACH — {Protocols.AiLine[ai]}\nChoose an AI protocol", 4f);
+        }
+
+        /// <summary>缺口里那面墙的高度：取左右两栋邻居房子的平均高度再矮一点，夹在 7.5–12 之间。</summary>
+        float GapWallHeight(float gapStart)
+        {
+            float gapEnd = gapStart + LadderArt.WallTiles, sum = 0f; int n = 0;
+            foreach (var sp in neSpans)
+            {
+                bool left = sp.y > gapStart - 2f && sp.y <= gapStart + 0.5f;
+                bool right = sp.x >= gapEnd - 0.5f && sp.x < gapEnd + 2f;
+                if (left || right) { sum += sp.z; n++; }
+            }
+            return n == 0 ? 9.5f : Mathf.Clamp(sum / n * 0.88f, 7.5f, 12f);
+        }
+
+        void SpawnLadders()
+        {
+            for (int i = 0; i < exits.Length; i++)
+            {
+                var k = exits[i];
+                string title = k switch
+                {
+                    RoomKind.Boss => "Boss",
+                    RoomKind.Shop => "Black Market",
+                    RoomKind.Event => "Event",
+                    RoomKind.Signal => "Ghost Channel",
+                    _ => exits.Length > 1 ? "Combat" : "Next Room",
+                };
+                Ladder.Build(transform, ladderAt[i], by, k, title, fork: exits.Length > 1 && k == RoomKind.Combat, height: GapWallHeight(ladderAt[i] - LadderArt.LadderOffset));
+                Effects.Sparks(Iso.W(ladderAt[i] + 0.6f, by + 0.5f), Sprites.Hex("ffb070"), 8, 2f);
+            }
+        }
+
+        // ---------------------------------------------------------------- 黑市
+        /// <summary>老鬼的黑市：3 把武器 + 4 种补给，可以花 15 信用点刷新一次武器货架。</summary>
+        void SetupShop()
+        {
+            var t = transform;
+            var rng = new System.Random();
+            var shelf = new List<WeaponPickup>();
+            void Stock()
+            {
+                foreach (var w in shelf) if (w != null) Destroy(w.gameObject);
+                shelf.Clear();
+                var taken = new List<WeaponDef> { player.Slots[0], player.Slots[1] };
+                for (int i = 0; i < 3; i++)
+                {
+                    var w = Weapons.Roll(rng, Weapons.ShopOdds, taken.ToArray());
+                    taken.Add(w);
+                    shelf.Add(WeaponPickup.Spawn(t, Center + new Vector2((i - 1) * 2.6f, 1.4f), w, w.price));
+                }
+            }
+            Stock();
+            var items = new[] { Item.RedLine, Item.Gel, Item.Cell, Item.Overload, Item.Ammo };
+            for (int i = 0; i < items.Length; i++)
+                ItemPickup.Spawn(t, Center + new Vector2((i - 2f) * 2.2f, -1.0f), items[i], Items.Price(items[i]));
+            // 两件义体（数值增益），₡90 一件
+            var chips = Buffs.Roll(rng, 2, player, true, BuffGroup.Attack, BuffGroup.Defense, BuffGroup.Weapon, BuffGroup.Resource);
+            for (int i = 0; i < chips.Count; i++)
+            {
+                var b = chips[i];
+                Vector2 at = Center + new Vector2(i == 0 ? -5.2f : 5.2f, 1.4f);
+                var chip = Loot.Holder(t, "义体", at);
+                Loot.Px(chip.transform, 10, 10, Sprites.Hex("1e1c22"), new Vector2(0, 5));
+                Loot.Px(chip.transform, 6, 6, Buffs.GroupColor[(int)b.group], new Vector2(0, 5), 1);
+                ActionPoint.Spawn(t, at, $"{b.name}  ₡90", $"E  Install implant {b.name} (₡90)\n{b.desc}", p =>
+                {
+                    if (p.credits < 90) { GreyboxHUD.Message($"Not enough credits (need ₡{90 - p.credits} more)", 1.5f); return false; }
+                    p.credits -= 90;
+                    p.ApplyBuff(b);
+                    Effects.Sparks(at, Buffs.GroupColor[(int)b.group], 8, 2.5f);
+                    GreyboxHUD.Message($"Implant installed: {b.name}  {b.desc}", 2f);
+                    Destroy(chip);
+                    return true;
+                });
+            }
+            var stall = Loot.Holder(t, "Stall", Center + new Vector2(0f, 3.0f));
+            Loot.Px(stall.transform, 40, 18, Sprites.Hex("2a2420"), new Vector2(0, 9));
+            Loot.Px(stall.transform, 40, 3, Sprites.Hex("e0409a"), new Vector2(0, 19), 1);
+            Atmosphere.Lamp(t, Center + new Vector2(0f, 3.8f), Sprites.Hex("e0409a"), 6f, 1.0f);
+            ActionPoint.Spawn(t, Center + new Vector2(0f, 3.0f), "Old Ghost's Market", "E  Restock the weapon rack (₡25, once)", p =>
+            {
+                if (p.credits < 25) { GreyboxHUD.Message($"Not enough credits (need ₡{25 - p.credits} more)", 1.5f); return false; }
+                p.credits -= 25;
+                Stock();
+                GreyboxHUD.Message("OLD GHOST: \"Fresh stock. Don't ask where from.\"", 2f);
+                return true;
+            }).radius = 1.6f;
+        }
+
+        // ---------------------------------------------------------------- 随机事件（占位：三选一个出现）
+        void SetupEvent()
+        {
+            var t = transform;
+            var pos = Center + new Vector2(0f, 0.6f);
+            var post = Loot.Holder(t, "Event", pos);
+            int pick = Random.Range(0, 4);
+            if (pick == 3)
+            {
+                EventName = "Ripperdoc";
+                Loot.Px(post.transform, 22, 30, Sprites.Hex("2a2830"), new Vector2(0, 15));
+                Loot.Px(post.transform, 18, 4, Sprites.Hex("e0409a"), new Vector2(0, 26), 1);
+                Loot.Px(post.transform, 6, 6, Loot.HealCol, new Vector2(0, 16), 1);
+                Atmosphere.Lamp(t, pos + Vector2.up * 1f, Sprites.Hex("e0409a"), 4.5f, 1f);
+                ActionPoint.Spawn(t, pos, "Ripperdoc", "E  Lie on the table: one free implant (choose 1 of 3)", p =>
+                {
+                    var list = Buffs.Roll(new System.Random(), 3, p, true, BuffGroup.Defense, BuffGroup.Weapon);
+                    for (int i = 0; i < list.Count; i++)
+                        Pickup.Spawn(t, pos + new Vector2((i - 1) * 3.2f, -1.6f), list[i], 2);
+                    GreyboxHUD.Message("RIPPERDOC: \"Pick one. Anesthetic is extra. Kidding.\"", 2.5f);
+                    return true;
+                });
+            }
+            else if (pick == 0)
+            {
+                EventName = "Back-Alley Doc";
+                Loot.Px(post.transform, 14, 30, Sprites.Hex("2c2a2e"), new Vector2(0, 15));
+                Loot.Px(post.transform, 10, 6, Loot.HealCol, new Vector2(0, 24), 1);
+                Atmosphere.Lamp(t, pos + Vector2.up * 1f, Loot.HealCol, 4f, 0.9f);
+                ActionPoint.Spawn(t, pos, "Back-Alley Doc", "E  Sell blood to the back-alley doc: HP -1, Power +50", p =>
+                {
+                    if (p.Hp.hp <= 1f) { GreyboxHUD.Message("DOC: \"Any more and you'll be empty.\"", 2f); return false; }
+                    p.Hp.hp -= 1f; p.AddEnergy(50f);
+                    Effects.Sparks(p.transform.position + Vector3.up, Loot.HealCol, 8, 2f);
+                    GreyboxHUD.Message("HP -1, Power +50", 2f);
+                    return true;
+                });
+            }
+            else if (pick == 1)
+            {
+                EventName = "Slot Machine";
+                Loot.Px(post.transform, 18, 28, Sprites.Hex("3a2a1e"), new Vector2(0, 14));
+                Loot.Px(post.transform, 14, 8, Loot.CreditCol, new Vector2(0, 20), 1);
+                Atmosphere.Lamp(t, pos + Vector2.up * 1f, Loot.CreditCol, 4f, 0.9f);
+                ActionPoint.Spawn(t, pos, "Slot Machine", "E  Insert ₡70: spits out a random weapon (Uncommon+)", p =>
+                {
+                    if (p.credits < 70) { GreyboxHUD.Message($"Not enough credits (need ₡{70 - p.credits} more)", 1.5f); return false; }
+                    p.credits -= 70;
+                    WeaponPickup.Spawn(t, pos + new Vector2(0f, -1.2f), Weapons.Roll(new System.Random(), Weapons.EventOdds, p.Slots[0], p.Slots[1]));
+                    GreyboxHUD.Message("CLUNK — a weapon drops out", 2f);
+                    return true;
+                });
+            }
+            else
+            {
+                EventName = "Drifted Body";
+                Loot.Px(post.transform, 30, 8, Sprites.Hex("3a3438"), new Vector2(0, 4));
+                Loot.Px(post.transform, 8, 6, Sprites.Hex("5a4a44"), new Vector2(-13, 6), 1);
+                ActionPoint.Spawn(t, pos, "Drifted Body", "E  Search the body: +35 credits, 30% chance his implant alarm goes off (HP -1)", p =>
+                {
+                    p.credits += 35;
+                    if (Random.value < 0.3f && p.Hp.hp > 1f)
+                    {
+                        p.Hp.hp -= 1f;
+                        CameraRig.Shake(0.15f);
+                        Effects.Flash(p.transform.position + Vector3.up, Loot.HealCol, 2f, 1.2f, 0.25f);
+                        GreyboxHUD.Message("Implant alarm blew up! +35 credits, HP -1", 2f);
+                    }
+                    else GreyboxHUD.Message("+35 credits", 1.6f);
+                    return true;
+                });
+            }
+        }
+
+        /// <summary>镜头能去的范围：只框住这一间（房子要往上留出高度）。</summary>
+        public Rect ViewRect
+        {
+            get
+            {
+                Vector2 a = Iso.W(bx - BackNW, by - BackNE), b = Iso.W(bx + gx, by - BackNE), c = Iso.W(bx + gx, by + gy), d = Iso.W(bx - BackNW, by + gy);
+                float xMin = Mathf.Min(a.x, b.x, c.x, d.x) - 1f, xMax = Mathf.Max(a.x, b.x, c.x, d.x) + 1f;
+                float yMin = Mathf.Min(a.y, b.y, c.y, d.y) - 2f, yMax = Mathf.Max(a.y, b.y, c.y, d.y) + 6f;
+                return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+            }
         }
     }
 }

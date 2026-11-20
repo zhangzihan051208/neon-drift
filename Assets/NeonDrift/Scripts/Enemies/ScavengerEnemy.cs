@@ -20,11 +20,12 @@ namespace NeonDrift
         bool hitThisLunge;
 
         protected override float MaxHp => 3f;
+        protected override void OnAllegianceChanged() { state = State.Chase; Telegraph(false); }
         protected override Color BodyColor => Sprites.Hex("4a5a3a");
 
-        protected override void Think(PlayerController p)
+        protected override void Think(Vector2 target, Health targetHp)
         {
-            Vector2 to = (Vector2)p.transform.position - Pos;
+            Vector2 to = target - Pos;
             switch (state)
             {
                 case State.Chase:
@@ -42,7 +43,9 @@ namespace NeonDrift
                     if (!hitThisLunge && to.magnitude < 0.9f)
                     {
                         hitThisLunge = true;
-                        p.Hp.Damage(damage, lungeDir);
+                        bool hit = targetHp.Damage(damage, lungeDir, DamageKind.Melee);
+                        var pl = Player;
+                        if (!hit && pl != null && targetHp == pl.Hp && pl.IsDashing) pl.PerfectDodge();    // 扑砍被闪移躲开
                     }
                     if (t <= 0f) { state = State.Recover; t = recover; }
                     break;

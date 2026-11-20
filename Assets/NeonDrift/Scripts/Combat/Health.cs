@@ -52,9 +52,13 @@ namespace NeonDrift
             if (flash <= 0f) r.color = c;
         }
 
-        public bool Damage(float amount, Vector2 dir)
+        /// <summary>受伤前改写伤害（玩家的护甲和抗性）。返回 0 表示这一下被挡掉。</summary>
+        public Func<float, DamageKind, float> Modify;
+
+        public bool Damage(float amount, Vector2 dir, DamageKind kind = DamageKind.Bullet)
         {
             if (IsDead || IsInvulnerable) return false;
+            if (Modify != null) { amount = Modify(amount, kind); if (amount <= 0f) return false; }
             hp = Mathf.Max(0f, hp - amount);
             flash = 0.07f;
             iframes = hurtIFrames;
@@ -81,6 +85,9 @@ namespace NeonDrift
                 if (iframes <= 0f) foreach (var r in rends) if (r) r.enabled = true;
             }
         }
+
+        /// <summary>给一段无敌时间（护甲挡下攻击时用：不掉血，但也要有短暂无敌，避免一串子弹把护甲连着打光）。</summary>
+        public void SetIFrames(float t) => iframes = Mathf.Max(iframes, t);
 
         void SetWhite(bool on)
         {

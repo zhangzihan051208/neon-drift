@@ -3,37 +3,25 @@ using UnityEngine;
 
 namespace NeonDrift
 {
-    public enum RewardType { FireRate, Bounce, MaxHp, Damage }
-
-    /// <summary>三选一奖励（占位版）：拿走一个，其余消失。之后会换成 AI 协议、武器、义体。</summary>
+    /// <summary>增益三选一：走上去拿走一个，同一组的其余几个消失。</summary>
     public class Pickup : MonoBehaviour
     {
         public static readonly List<Pickup> All = new List<Pickup>();
 
-        public RewardType type;
-        public string Label => type switch
-        {
-            RewardType.FireRate => "射速 +20%",
-            RewardType.Bounce => "反弹 +1",
-            RewardType.MaxHp => "生命上限 +1",
-            RewardType.Damage => "伤害 +25%",
-            _ => ""
-        };
+        public BuffDef buff;
+        int group;
+        public string Label => buff.ai >= 0 ? $"{buff.name}\n[{buff.slot}] {buff.desc}" : $"{buff.name}\n{buff.desc}";
+        public Color LabelColor => buff.ai >= 0 ? Protocols.AiColor[buff.ai] : Buffs.GroupColor[(int)buff.group];
 
-        public static Pickup Spawn(Transform parent, Vector2 pos, RewardType t)
+        public static Pickup Spawn(Transform parent, Vector2 pos, BuffDef b, int group = 0)
         {
-            Color c = t switch
-            {
-                RewardType.FireRate => Sprites.Hex("05d9e8"),
-                RewardType.Bounce => Sprites.Hex("ffb347"),
-                RewardType.MaxHp => Sprites.Hex("e43b44"),
-                _ => Sprites.Hex("b026ff"),
-            };
-            var sr = Sprites.Make(parent, "Pickup", Sprites.Box(18, 18), c, 0, pos);
+            Color c = b.ai >= 0 ? Protocols.AiColor[b.ai] : Buffs.GroupColor[(int)b.group];
+            var sr = Sprites.Make(parent, "Buff", Sprites.Box(14, 14), c, 0, pos);
             sr.transform.localRotation = Quaternion.Euler(0, 0, 45);
+            sr.sortingOrder = Iso.Order(pos.y);
             sr.gameObject.AddComponent<Pulse>();
             var p = sr.gameObject.AddComponent<Pickup>();
-            p.type = t;
+            p.buff = b; p.group = group;
             return p;
         }
 
@@ -47,10 +35,10 @@ namespace NeonDrift
             Vector2 d = (Vector2)transform.position - ((Vector2)pl.transform.position + Vector2.up * 0.4f);
             if (d.magnitude < 0.8f)
             {
-                pl.ApplyReward(type);
+                pl.ApplyBuff(buff);
                 Effects.Burst(transform.position, GetComponent<SpriteRenderer>().color);
-                GreyboxHUD.Message($"获得：{Label}", 2f);
-                foreach (var p in All.ToArray()) Destroy(p.gameObject);
+                GreyboxHUD.Message($"{Buffs.GroupName[(int)buff.group]}: {buff.name}  {buff.desc}", 2.5f);
+                foreach (var p in All.ToArray()) if (p.group == group) Destroy(p.gameObject);
             }
         }
     }

@@ -147,7 +147,7 @@ namespace NeonDrift
             {
                 hitTime += Time.deltaTime;
                 sprite = Frame("idle", dir, 0);
-                if (hitTime >= 0.25f) hitting = false;
+                if (hitTime >= PlayerController.HitStun) hitting = false;          // 受击姿势和硬直一样长
             }
             else if (mode == 2) sprite = Frame("run", dir, Mathf.FloorToInt(locoTime * 13f));
             else if (mode == 1) sprite = Frame("walk", dir, Mathf.FloorToInt(locoTime * 10f));
