@@ -31,7 +31,7 @@ namespace NeonDrift
             // ---------------- 攻击（原来的三个 + 新的）
             B("overclock", BuffGroup.Attack, "Overclock", "Fire rate +20%"),
             B("breach", BuffGroup.Attack, "Breach", "Damage +25%"),
-            B("refract", BuffGroup.Attack, "Refract", "Bullets bounce off walls 1 more time"),
+            B("refract", BuffGroup.Attack, "Refract", "Bullets bounce off walls once (stacks)"),
             B("crit", BuffGroup.Attack, "Hunter Chip", "Crit chance +15%"),
             B("critdmg", BuffGroup.Attack, "Lethal", "Crit damage +50% (x2 -> x2.5)"),
             B("weak", BuffGroup.Attack, "Weak Point Scan", "+25% crit chance vs stunned, burning or turned enemies"),

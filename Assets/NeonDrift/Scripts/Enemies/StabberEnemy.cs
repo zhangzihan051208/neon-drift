@@ -57,6 +57,7 @@ namespace NeonDrift
                     if (t <= 0f)
                     {
                         state = State.Lunge; t = lungeTime; hitThis = false; Telegraph(false); ShowLine(0f);
+                        Sfx.Play("enemy_lunge", 1f, Pos);
                         PixelFx.Play(PixelFx.Thrust(Mathf.RoundToInt(attackRange * Sprites.PPU * 0.6f), false, false), Center, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg,
                                      Allied ? AllyRing : Sprites.Hex("ff5a4a"), 22f, 6000, false, transform);
                     }

@@ -102,6 +102,7 @@ namespace NeonDrift
                 }
                 Destroy(p.gameObject); n++;
             }
+            if (n > 0) Sfx.Play("bullet_cut", 1f, center, 0.08f, 0.05f);
             return n;
         }
 
@@ -156,6 +157,7 @@ namespace NeonDrift
                     if (h.Damage(dmg, dir, kind == "flame" || kind == "ember" ? DamageKind.Fire : kind == "bolt" || kind == "orb" ? DamageKind.Shock : DamageKind.Bullet))
                     {
                         if (isCrit) shooter.OnCrit(hit.point, he);
+                        else if (team == Team.Player) Sfx.Play("enemy_hit", 0.7f, hit.point, 0.1f, 0.05f);
                         if (kind == "javelin" && he != null) he.Paralyze(1f);                       // 标枪：钉住
                         if (burn > 0f) Burning.Apply(h, burn, color);
                         if (chain > 0) Chain(hit.point, h, chain, damage * 0.6f, color, team);
@@ -329,6 +331,7 @@ namespace NeonDrift
         {
             int rpx = Mathf.RoundToInt(explode * Sprites.PPU * 0.75f);
             PixelFx.Play(PixelFx.Explosion(rpx), at, 0f, color, 18f, 6001);
+            Sfx.Play("explosion", 1f, at, 0.08f, 0.08f);
             Effects.Flash(at, color, explode * 3f, 2.4f, 0.18f);
             Effects.Sparks(at, color, 10, 6f);
             CameraRig.Shake(0.25f);

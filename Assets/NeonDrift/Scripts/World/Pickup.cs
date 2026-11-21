@@ -36,6 +36,7 @@ namespace NeonDrift
             if (d.magnitude < 0.8f)
             {
                 pl.ApplyBuff(buff);
+                Sfx.Play("buff");
                 Effects.Burst(transform.position, GetComponent<SpriteRenderer>().color);
                 GreyboxHUD.Message($"{Buffs.GroupName[(int)buff.group]}: {buff.name}  {buff.desc}", 2.5f);
                 foreach (var p in All.ToArray()) if (p.group == group) Destroy(p.gameObject);

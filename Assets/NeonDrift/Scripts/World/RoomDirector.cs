@@ -76,6 +76,7 @@ namespace NeonDrift
             rd.Kind = kind; rd.exits = exits ?? new RoomKind[0];
             for (int i = 0; i < rd.exits.Length; i++) rd.ladderAt.Add(bx + gx * (i + 1f) / (rd.exits.Length + 1f) - 0.6f);
             rd.Generate(rng);
+            rd.BuildLadders();
             return rd;
         }
 
@@ -616,6 +617,7 @@ namespace NeonDrift
             foreach (var e in Enemy.All.ToArray()) if (e != null && e.Allied && e.transform.parent == transform) e.Dismiss();   // 倒戈的单位断电下线
             if (exitGate != null) exitGate.SetActive(false);
             Chest.Spawn(transform, Center + (IsLast ? new Vector2(0f, -1.6f) : Vector2.zero));
+            Sfx.Play("room_clear");
             if (IsLast) SpawnProtocols();
             SpawnLadders();
             if (IsLast) { }                                         // 入侵台词由 Invasion 显示
@@ -638,6 +640,7 @@ namespace NeonDrift
                 PixelFx.Play(PixelFx.Glitch(14), at, 0f, Protocols.AiColor[list[i].ai], 14f);
             }
             CameraRig.Shake(0.12f);
+            Sfx.Play("protocol_appear");
             Effects.Flash(Center + offset, Protocols.AiColor[ai], 6f, 1.5f, 0.25f);
             GreyboxHUD.Message($"GHOST CHANNEL BREACH — {Protocols.AiLine[ai]}\nChoose an AI protocol", 4f);
         }
@@ -655,7 +658,10 @@ namespace NeonDrift
             return n == 0 ? 9.5f : Mathf.Clamp(sum / n * 0.88f, 7.5f, 12f);
         }
 
-        void SpawnLadders()
+        readonly List<Ladder> ladders = new List<Ladder>();
+
+        /// <summary>房间一生成就把梯子墙立好（梯子先收着），清完房间再放下梯子。</summary>
+        void BuildLadders()
         {
             for (int i = 0; i < exits.Length; i++)
             {
@@ -668,7 +674,17 @@ namespace NeonDrift
                     RoomKind.Signal => "Ghost Channel",
                     _ => exits.Length > 1 ? "Combat" : "Next Room",
                 };
-                Ladder.Build(transform, ladderAt[i], by, k, title, fork: exits.Length > 1 && k == RoomKind.Combat, height: GapWallHeight(ladderAt[i] - LadderArt.LadderOffset));
+                ladders.Add(Ladder.Build(transform, ladderAt[i], by, k, title, fork: exits.Length > 1 && k == RoomKind.Combat,
+                                         height: GapWallHeight(ladderAt[i] - LadderArt.LadderOffset), locked: true));
+            }
+        }
+
+        void SpawnLadders()
+        {
+            for (int i = 0; i < ladders.Count; i++)
+            {
+                if (ladders[i] == null || !ladders[i].Locked) continue;
+                ladders[i].Unlock();
                 Effects.Sparks(Iso.W(ladderAt[i] + 0.6f, by + 0.5f), Sprites.Hex("ffb070"), 8, 2f);
             }
         }

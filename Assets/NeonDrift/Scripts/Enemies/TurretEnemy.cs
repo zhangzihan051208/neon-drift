@@ -51,6 +51,7 @@ namespace NeonDrift
                 {
                     Telegraph(false);
                     Vector2 muzzle = from + aim * 0.8f;
+                    Sfx.Play("turret_shoot", 1f, muzzle);
                     Projectile.Spawn(muzzle, aim, MyTeam, bulletSpeed, damage, 0, Allied ? Sprites.Hex("ffcf3a") : Sprites.Hex("ff3b6b"), 0.13f, 4f);
                     PixelFx.Play(PixelFx.Muzzle(6), muzzle, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg, Allied ? Sprites.Hex("ffcf3a") : Sprites.Hex("ff3b6b"), 30f);
                     cd = Allied ? fireInterval * 0.7f : fireInterval;

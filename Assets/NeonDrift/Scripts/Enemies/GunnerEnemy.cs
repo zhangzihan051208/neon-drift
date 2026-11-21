@@ -76,6 +76,7 @@ namespace NeonDrift
                 {
                     Telegraph(false);
                     Vector2 aim = (target + Vector2.up * 1.2f - Center).normalized;
+                    Sfx.Play("enemy_shoot", 1f, Center);
                     for (int i = 0; i < burst; i++)
                     {
                         float a = (i - (burst - 1) / 2f) * spread;

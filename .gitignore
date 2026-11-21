@@ -40,3 +40,9 @@ crashlytics-build.properties
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Claude 工作时的临时文件（试听 mp3、传输用的压缩包、旧版备份、文字提取）
+/Claude outputs/
+/Tools/*.zip
+/Tools/sfx_old_weapons/
+/Tools/_strs.txt

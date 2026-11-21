@@ -150,6 +150,7 @@ namespace NeonDrift
             float dist = to.magnitude;
             if (dist < 0.45f)
             {
+                Sfx.Play(kind == DropKind.Energy ? "pickup_energy" : kind == DropKind.Ammo ? "pickup_ammo" : "pickup_credit", 0.9f, null, 0.08f, 0.04f);
                 if (kind == DropKind.Energy) pl.AddEnergy(value);
                 else if (kind == DropKind.Ammo) { pl.AddReserve(pl.Weapon, Mathf.RoundToInt(value)); GreyboxHUD.Popup(transform.position, "+1 AMMO", Loot.AmmoCol); }
                 else pl.credits += Mathf.RoundToInt(value);
@@ -236,6 +237,7 @@ namespace NeonDrift
                 if (p.credits < price) { GreyboxHUD.Message($"Not enough credits (need ₡{price - p.credits} more)", 1.5f); return; }
                 p.credits -= price;
             }
+            if (price > 0) Sfx.Play("buy");
             var old = p.PickUp(def);
             if (old != null) Spawn(transform.parent, transform.position, old);
             Effects.Sparks(transform.position, def.color, 6, 2.5f);
@@ -272,6 +274,7 @@ namespace NeonDrift
                 p.credits -= price;
             }
             Items.Apply(item, p);
+            Sfx.Play(price > 0 ? "buy" : "item_use");
             Effects.Sparks(transform.position, heal ? Loot.HealCol : item == Item.Ammo ? Loot.AmmoCol : Loot.EnergyCol, 8, 2.5f);
             GreyboxHUD.Message($"{Items.Name(item)}: {Items.Effect(item)}", 1.4f);
             Destroy(gameObject);
@@ -313,6 +316,7 @@ namespace NeonDrift
             else if (r < wHeal + wEnergy + wAmmo) ItemPickup.Spawn(transform.parent, at, Item.Ammo);
             else WeaponPickup.Spawn(transform.parent, at, Weapons.Roll(new System.Random(), Weapons.ChestOdds, p.Slots[0], p.Slots[1]));
             stripe.color = Sprites.Hex("2a211b");
+            Sfx.Play("chest_open", 1f, transform.position);
             Effects.Sparks((Vector2)transform.position + Vector2.up * 0.4f, Loot.CreditCol, 10, 3f);
             CameraRig.Shake(0.05f);
             Destroy(this);                          // 打开后只剩空箱子
@@ -350,7 +354,7 @@ namespace NeonDrift
         public Vector2 Foot { get; private set; }
         Vector2 point, labelAt;
 
-        public static Ladder Build(Transform parent, float tx, float y0, RoomKind target, string title, bool fork = false, float height = LadderArt.HeightUnits)
+        public static Ladder Build(Transform parent, float tx, float y0, RoomKind target, string title, bool fork = false, float height = LadderArt.HeightUnits, bool locked = false)
         {
             var go = new GameObject("Ladder");
             go.transform.SetParent(parent, false);
@@ -368,7 +372,8 @@ namespace NeonDrift
             var glow = Sprites.Make(go.transform, "Glow", art.glow, Color.white, order + 1, Vector2.zero);
             glow.transform.position = wallStart;
             glow.sharedMaterial = Glow.Mat();
-            l.textures = new[] { art.main.texture, art.glow.texture };
+            l.textures = new[] { art.main.texture, art.glow.texture, art.bareMain.texture, art.bareGlow.texture };
+            l.mainSr = main; l.glowSr = glow; l.art = art;
             // 梯子顶上一盏灯，颜色跟着样式走
             var lamp = Atmosphere.Lamp(go.transform, wallStart + art.lamp, art.lampCol, 3f, 0.9f);
             if (art.flicker)
@@ -381,7 +386,26 @@ namespace NeonDrift
             l.point = Iso.W(tx + W * 0.5f, y0 + 1.0f);
             l.labelAt = (a + b) * 0.5f + Vector2.up * 2.4f;
             l.radius = 1.5f;
+            l.lamp = lamp;
+            if (locked)                                                          // 墙先立着，梯子等房间清完才放下来
+            {
+                main.sprite = art.bareMain; glow.sprite = art.bareGlow;
+                if (lamp != null) lamp.enabled = false;
+                l.enabled = false;
+            }
             return l;
+        }
+
+        SpriteRenderer mainSr, glowSr; LadderArt.Result art; UnityEngine.Rendering.Universal.Light2D lamp;
+        public bool Locked => !enabled;
+
+        /// <summary>房间清完：墙上放下梯子、点亮梯子顶上的灯，可以爬了。</summary>
+        public void Unlock()
+        {
+            if (enabled) return;
+            mainSr.sprite = art.main; glowSr.sprite = art.glow;
+            if (lamp != null) lamp.enabled = true;
+            enabled = true;
         }
 
         Texture2D[] textures;

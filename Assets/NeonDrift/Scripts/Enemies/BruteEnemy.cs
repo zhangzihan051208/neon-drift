@@ -61,6 +61,7 @@ namespace NeonDrift
                         Effects.Flash(at, col, 4f, 1.6f, 0.1f);
                         Effects.Splash(at, 12, 4.5f);
                         CameraRig.Shake(0.15f);
+                        Sfx.Play("brute_slam", 1f, at);
                         if (to.magnitude < slamRadius)
                         {
                             bool hit = targetHp.Damage(damage, to.normalized, DamageKind.Melee);

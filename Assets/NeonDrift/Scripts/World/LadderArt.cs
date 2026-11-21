@@ -49,7 +49,7 @@ namespace NeonDrift
         static void F(Canvas c, float u, float v, Color col) => c.Set(L + Mathf.RoundToInt(u), Mathf.RoundToInt(BaseY(u) + v), col);
         static void FG(Canvas c, float u, float v, Color col) => c.Glow(L + Mathf.RoundToInt(u), Mathf.RoundToInt(BaseY(u) + v), col);
 
-        public class Result { public Sprite main, glow; public Vector2 lamp; public Color lampCol; public bool flicker; }
+        public class Result { public Sprite main, glow, bareMain, bareGlow; public Vector2 lamp; public Color lampCol; public bool flicker; }
 
         public static Result Make(RoomKind kind, bool combatFork, int seed, float heightUnits = HeightUnits)
         {
@@ -180,8 +180,11 @@ namespace NeonDrift
                     F(c, 6 + k * 0.5f + PPU * (WallDepth * 0.3f + k * 0.03f), top[6] + 16f * (WallDepth * 0.3f + k * 0.03f) + 2, C(48, 40, 34));
             }
 
-            // ---------------- 梯子
+            // ---------------- 梯子（先存一份没有梯子的墙：战斗房清完之前只显示墙）
             var res = new Result();
+            var pivot0 = new Vector2(L / (float)c.w, Skew / (float)c.h);
+            res.bareMain = ToSprite((Color32[])c.px.Clone(), c.w, c.h, pivot0, "LadderWallBare");
+            res.bareGlow = ToSprite((Color32[])c.glow.Clone(), c.w, c.h, pivot0, "LadderGlowBare");
             switch (kind)
             {
                 case RoomKind.Shop: WoodLadder(c, rng, u0, lw); res.lampCol = Sprites.Hex("e0409a"); res.flicker = true; break;
@@ -344,7 +347,7 @@ namespace NeonDrift
         static readonly Color[] Paints = { C(130, 40, 34), C(150, 126, 52), C(140, 134, 124), C(116, 50, 100), C(104, 112, 58), C(150, 74, 40) };
 
         // 5×7 像素字体：每个字 7 行，每行 5 位，'#' 是笔画
-        static readonly Dictionary<char, string[]> Glyphs = new Dictionary<char, string[]>
+        internal static readonly Dictionary<char, string[]> Glyphs = new Dictionary<char, string[]>
         {
             ['A'] = new[] { ".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#" },
             ['B'] = new[] { "####.", "#...#", "#...#", "####.", "#...#", "#...#", "####." },

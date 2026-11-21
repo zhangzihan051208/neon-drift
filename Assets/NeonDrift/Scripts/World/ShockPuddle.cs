@@ -34,6 +34,7 @@ namespace NeonDrift
             t = st == State.Live ? Mathf.Max(t, seconds) : seconds; st = State.Live; emit = 0f;
             nextHit.Clear();
             CameraRig.Shake(0.04f);
+            Sfx.Play("shock_live", 1f, c);
         }
 
         /// <summary>霓姬「导电」：电击打中站在水坑里的敌人时，整片积水带电 1.5 秒。</summary>
@@ -136,7 +137,7 @@ namespace NeonDrift
                     SetGlow(0f, 0f);
                     warnLamp.color = Sprites.Hex("5a3a10");
                     if (emit <= 0f) { emit = 0.9f + (float)rng.NextDouble() * 0.8f; Effects.Sparks(cableEnd, ArcCol, 1, 1.2f); }
-                    if (t <= 0f) { st = State.Warn; t = WarnTime; }
+                    if (t <= 0f) { st = State.Warn; t = WarnTime; Sfx.Play("shock_warn", 1f, c); }
                     break;
                 case State.Warn:
                 {
@@ -149,7 +150,7 @@ namespace NeonDrift
                         Arc(WarnCol, near: true);
                         if (Random.value < 0.5f) Effects.Sparks(cableEnd, ArcCol, 2, 2f);
                     }
-                    if (t <= 0f) { st = State.Live; t = LiveTime; CameraRig.Shake(0.03f); }
+                    if (t <= 0f) { st = State.Live; t = LiveTime; CameraRig.Shake(0.03f); Sfx.Play("shock_live", 1f, c); }
                     break;
                 }
                 case State.Live:

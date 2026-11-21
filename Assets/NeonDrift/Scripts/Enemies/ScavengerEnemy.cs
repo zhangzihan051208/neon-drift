@@ -35,7 +35,7 @@ namespace NeonDrift
                 case State.Windup:
                     rb.linearVelocity = Vector2.zero;
                     t -= Time.fixedDeltaTime;
-                    if (t <= 0f) { state = State.Lunge; t = lungeTime; lungeDir = to.normalized; hitThisLunge = false; Telegraph(false); }
+                    if (t <= 0f) { state = State.Lunge; t = lungeTime; lungeDir = to.normalized; hitThisLunge = false; Telegraph(false); Sfx.Play("enemy_lunge", 0.9f, Pos); }
                     break;
                 case State.Lunge:
                     rb.linearVelocity = lungeDir * lungeSpeed;

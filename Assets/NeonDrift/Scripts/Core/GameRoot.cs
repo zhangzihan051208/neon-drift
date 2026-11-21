@@ -33,8 +33,11 @@ namespace NeonDrift
             I = this;
             CameraRig.Setup();
             Atmosphere.Setup(Camera.main);
+            GameSettings.Load();                                  // 语言、音量、震动等设置
             gameObject.AddComponent<GreyboxHUD>();
+            gameObject.AddComponent<Menus>();
             StartRun();
+            Menus.I.ShowTitle();                                  // 先进开始页面
         }
 
         public void StartRun()
@@ -51,6 +54,13 @@ namespace NeonDrift
             Player = PlayerController.Spawn(Vector2.zero);
             World = WorldBuilder.Build(Player);
             PlaceInRoom();
+            Sfx.Loop("rain_loop", 0.22f);                          // 雨声底噪，很轻
+            ShowIntro();
+        }
+
+        /// <summary>开局的操作提示（从开始页面进游戏时也再显示一次）。</summary>
+        public void ShowIntro()
+        {
             GreyboxHUD.Message("WASD move · LMB shoot · RMB melee · Space dash · R reload · Q swap · F hack · E interact\nAmmo is scarce: melee kills give bullets back", 5f);
         }
 
@@ -103,6 +113,7 @@ namespace NeonDrift
             p.Frozen = true;
             rb.linearVelocity = Vector2.zero;
             rb.simulated = false;
+            Sfx.Play("ladder");
             // 走到梯子脚下
             Vector2 start = p.transform.position;
             p.ClimbMove = (l.Foot - start).sqrMagnitude > 0.01f ? (l.Foot - start).normalized : Vector2.up;
@@ -143,6 +154,7 @@ namespace NeonDrift
 
         void Update()
         {
+            if (Menus.Blocking) return;                           // 菜单开着：不交互、不重开
             Interactable.Tick(Player);
             var kb = Keyboard.current;
             var gp = Gamepad.current;

@@ -65,6 +65,7 @@ namespace NeonDrift
         {
             if (w == null || n <= 0) return;
             SetAmmo(w, Ammo(w) + n);
+            Sfx.Play("pickup_ammo", 0.8f);
             GreyboxHUD.Popup((Vector2)transform.position + Vector2.up * 2.2f, $"+{n} {w.name}", new Color(0.85f, 0.82f, 0.76f));
         }
         bool iaiReady;
@@ -197,6 +198,7 @@ namespace NeonDrift
                 GameRoot.Hitstop(0.06f);
                 rb.linearVelocity = (dir.sqrMagnitude > 0.001f ? dir.normalized : -AimDir) * 7.5f;     // 击退：往受击方向滑一小段
                 stunT = HitStun;
+                Sfx.Play("hurt");
                 lastHitTime = Time.time; armorT = 0f;
                 move = Vector2.zero; sprintHeld = false; dashBuf = 0f;
                 fireCd = Mathf.Max(fireCd, HitStun);
@@ -205,6 +207,7 @@ namespace NeonDrift
             };
             hp.Died += () =>
             {
+                Sfx.Play("death");
                 rb.linearVelocity = Vector2.zero;
                 if (visual != null && visual.Ready)
                 {
@@ -222,7 +225,7 @@ namespace NeonDrift
 
         void Update()
         {
-            if (IsDead) return;
+            if (IsDead || Menus.Blocking) return;
             if (Frozen) { move = ClimbMove; UpdateFacingVisuals(); return; }
             RegenArmor();
             if (stunT > 0f) { stunT -= Time.deltaTime; move = Vector2.zero; sprintHeld = false; }
@@ -393,6 +396,8 @@ namespace NeonDrift
             recoil = Mathf.Min(0.3f, 0.06f + w.shake);
             CameraRig.Shake(w.shake);
             shotVisual = true;
+            string snd = Sfx.ShotSound(w);
+            Sfx.Play(snd, snd == "shoot_flame" ? 0.8f : 1f, null, 0.06f, snd == "shoot_flame" ? 0.12f : snd == "shoot_rifle" ? 0.05f : 0.03f);
             if (Ammo(w) <= 0 && Reserve(w) > 0) StartReload();     // 打空自动换弹（有备弹的话）
         }
 
@@ -527,6 +532,7 @@ namespace NeonDrift
             float meleeDmg = DamageOf(w) * Pow(1.3f, "e_blade");
             iaiReady = Time.time - lastMeleeTime > 1.5f;              // 「拔刀术」：歇了 1.5 秒后的第一刀
             lastMeleeTime = Time.time;
+            Sfx.Play(w.melee == 3 ? "thrust" : w.melee == 2 ? "heavy_swing" : "swing", 0.9f);
             float meleeBurn = BurnDps(w) + 1.2f * N("e_blade") * dmgMul;
             if (w.melee == 3)
             {
@@ -619,6 +625,7 @@ namespace NeonDrift
                 CameraRig.Shake(w.shake);
                 GameRoot.Hitstop(hits > 0 ? 0.06f : 0.025f);
             }
+            if (hits > 0) Sfx.Play(w.melee == 2 ? "blunt_hit" : "melee_hit", 1f, null, 0.08f);
             MeleeReward(hits, kills);
         }
 
@@ -628,6 +635,7 @@ namespace NeonDrift
             dashT = dashTime;
             hp.invulnerable = true;
             dodgedThisDash = false; trailT = 0f;
+            Sfx.Play("dash", 0.9f);
             CameraRig.Shake(0.05f);
             Effects.Splash((Vector2)transform.position + Vector2.up * 0.1f, 7, 3.2f);
         }
@@ -695,6 +703,7 @@ namespace NeonDrift
             fireCd = Mathf.Max(fireCd, 0.15f);
             GreyboxHUD.Message($"{Weapons.Tag(Weapon)} · {Weapon.name} ({Weapons.CostText(Weapon)})", 1.2f);
             Protocols.OnSwap(this);
+            Sfx.Play("swap");
         }
 
         /// <summary>
@@ -706,6 +715,7 @@ namespace NeonDrift
             if (!IsDashing || dodgedThisDash) return;
             dodgedThisDash = true;
             pdUntil = Time.time + 1f;
+            Sfx.Play("perfect_dodge");
             Vector2 c = (Vector2)transform.position + Vector2.up * 1.2f;
             PixelFx.Play(PixelFx.Ring(20), c, 90f, Color.white, 20f);
             Effects.Flash(c, Color.white, 3.5f, 1.8f, 0.12f);
@@ -763,6 +773,7 @@ namespace NeonDrift
         /// <summary>暴击的手感：白红色的十字大闪光、额外顿帧和震屏、飘一个“暴击”字。</summary>
         public void OnCrit(Vector2 at, Enemy e)
         {
+            Sfx.Play("crit", 1f, at, 0.04f, 0.06f);
             PixelFx.Play(PixelFx.Cross(9), at, 45f, Color.white, 26f, 6002);
             PixelFx.Play(PixelFx.Impact(8), at, 0f, Sprites.Hex("ff5040"), 24f, 6001);
             Effects.Flash(at, Color.white, 3f, 2f, 0.08f);
@@ -777,6 +788,7 @@ namespace NeonDrift
         void NoAmmo()
         {
             fireCd = 0.3f;
+            Sfx.Play("dry_fire", 0.9f, null, 0.03f, 0.25f);
             Effects.Sparks((Vector2)gun.position + AimDir * 0.6f, new Color(0.5f, 0.5f, 0.5f), 2, 1f);      // 空膛咔哒一下
             if (Time.time - lastNoAmmo < 1.5f) return;
             lastNoAmmo = Time.time;
@@ -791,6 +803,7 @@ namespace NeonDrift
             if (Reserve(w) <= 0) { if (Ammo(w) == 0) NoAmmo(); else GreyboxHUD.Message("No spare ammo", 1f); return; }
             reloadW = w;
             reloadTotal = reloadT = w.reload * Pow(0.65f, "fastload");
+            Sfx.Play("reload_start");
             // 空弹匣掉在地上
             var mag = Sprites.Make(null, "Mag", Sprites.Box(3, 5), Sprites.Hex("3a3a40"), 4990, (Vector2)gun.position);
             var cf = mag.gameObject.AddComponent<CasingFly>();
@@ -807,6 +820,7 @@ namespace NeonDrift
                 int take = Mathf.Min(MagSize(reloadW) - Ammo(reloadW), Reserve(reloadW));
                 SetAmmo(reloadW, Ammo(reloadW) + take);
                 reserve[reloadW] = Reserve(reloadW) - take;
+                Sfx.Play("reload_end");
                 Effects.Sparks((Vector2)gun.position, Sprites.Hex("d8a040"), 2, 1.5f);
             }
         }
@@ -843,6 +857,7 @@ namespace NeonDrift
         {
             int plan = PlanPickUp(w, out _);
             if (plan == -2) return null;
+            Sfx.Play("weapon_pickup");
             if (plan == -1)
             {
                 var oldm = MeleeWeapon; MeleeWeapon = w; meleeCd = 0.2f;
@@ -952,6 +967,7 @@ namespace NeonDrift
         {
             Armor--;
             lastHitTime = Time.time; armorT = 0f;
+            Sfx.Play("armor_block");
             hp.SetIFrames(0.5f);
             Vector2 c = (Vector2)transform.position + Vector2.up * 1.2f;
             PixelFx.Play(PixelFx.Ring(18), c, 90f, ArmorCol, 22f);
@@ -985,6 +1001,7 @@ namespace NeonDrift
             if (armorT < ArmorRegen) return;
             armorT = 0f;
             Armor++;
+            Sfx.Play("armor_regen", 0.8f);
             Effects.Sparks((Vector2)transform.position + Vector2.up * 1.4f, ArmorCol, 3, 1.5f);
         }
 

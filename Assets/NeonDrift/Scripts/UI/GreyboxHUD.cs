@@ -48,6 +48,7 @@ namespace NeonDrift
             var root = GameRoot.I;
             var p = root != null ? root.Player : null;
             if (p == null) return;
+            if (Menus.OnTitle) return;                                       // 开始页面上不画 HUD
 
             // 生命（格子）
             float x = 14 * s, y = 12 * s;
@@ -76,13 +77,13 @@ namespace NeonDrift
             // 电量（黄绿色，和残电、电芯一个颜色）+ 信用点
             var ec = Loot.EnergyCol;
             Bar(new Rect(x, y + 20 * s, 120 * s, 6 * s), p.energy / p.maxEnergy, ec);
-            GUI.Label(new Rect(x + 126 * s, y + 14 * s, 120 * s, 18 * s), $"POWER {Mathf.FloorToInt(p.energy)}", new GUIStyle(label) { normal = { textColor = ec } });
-            GUI.Label(new Rect(x, y + 36 * s, 160 * s, 18 * s), $"₡ {p.credits}", new GUIStyle(label) { normal = { textColor = Loot.CreditCol } });
+            Lbl(new Rect(x + 126 * s, y + 14 * s, 120 * s, 18 * s), $"POWER {Mathf.FloorToInt(p.energy)}", new GUIStyle(label) { normal = { textColor = ec } });
+            Lbl(new Rect(x, y + 36 * s, 160 * s, 18 * s), $"₡ {p.credits}", new GUIStyle(label) { normal = { textColor = Loot.CreditCol } });
             // RAM（骇入用）：洋红色小格，正在恢复的那格按进度填
             if (p.Hacker != null)
             {
                 var hk = p.Hacker;
-                GUI.Label(new Rect(x, y + 52 * s, 40 * s, 16 * s), "RAM", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = Hacker.HackCol } });
+                Lbl(new Rect(x, y + 52 * s, 40 * s, 16 * s), "RAM", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = Hacker.HackCol } });
                 for (int i = 0; i < hk.MaxRam; i++)
                 {
                     var cell = new Rect(x + 32 * s + i * 12 * s, y + 55 * s, 9 * s, 9 * s);
@@ -105,7 +106,7 @@ namespace NeonDrift
                 string txt = w == null ? "(empty gun slot)" : $"{w.name}   {(w.thrown ? $"{p.Ammo(w)}/{p.MagSize(w)} left" : $"{p.Ammo(w)}/{p.MagSize(w)}  +{p.Reserve(w)}")}\n{Weapons.Tag(w)} · {(w.energy > 0f ? $"{w.energy:0.##} pwr" : "no power")} · Wt {w.weight}";
                 if (on && p.Reloading) Fill(new Rect(r.x, r.yMax - 3 * s, r.width * p.ReloadProgress, 3 * s), Sprites.Hex("d8a040"));
                 var st = new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = on ? Color.white : new Color(0.6f, 0.6f, 0.6f) } };
-                GUI.Label(new Rect(r.x + 6 * s, r.y, r.width - 8 * s, r.height), txt, st);
+                Lbl(new Rect(r.x + 6 * s, r.y, r.width - 8 * s, r.height), txt, st);
             }
             // 近战位
             if (p.MeleeWeapon != null)
@@ -115,17 +116,17 @@ namespace NeonDrift
                 Fill(mr, mw.signature ? new Color(0.05f, 0.03f, 0.04f, 0.92f) : new Color(0.16f, 0.07f, 0.06f, 0.85f));
                 Fill(new Rect(mr.x, mr.y, mr.width, 2 * s), mw.signature ? Weapons.SignatureCol : Weapons.RarityColor[(int)mw.rarity]);
                 if (mw.signature) Fill(new Rect(mr.x, mr.yMax - 1 * s, mr.width, 1 * s), Weapons.SignatureCol);
-                GUI.Label(new Rect(mr.x + 6 * s, mr.y, mr.width - 8 * s, mr.height), $"{mw.name}\nRMB · {Weapons.Tag(mw)} · {Weapons.ReachName(mw.reach)} · Wt {mw.weight}",
+                Lbl(new Rect(mr.x + 6 * s, mr.y, mr.width - 8 * s, mr.height), $"{mw.name}\nRMB · {Weapons.Tag(mw)} · {Weapons.ReachName(mw.reach)} · Wt {mw.weight}",
                           new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = Color.white } });
             }
-            GUI.Label(new Rect(x + 450 * s, Screen.height - 50 * s, 200 * s, 40 * s), "Q swap · R reload\nG drop gun · X drop melee", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft });
+            Lbl(new Rect(x + 450 * s, Screen.height - 50 * s, 200 * s, 40 * s), "Q swap · R reload\nG drop gun · X drop melee", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft });
             // 负重：三个武器加起来的重量
             {
                 var lr = new Rect(x, Screen.height - 64 * s, 290 * s, 5 * s);
                 float lf = p.Load / (float)p.Capacity;
                 Fill(lr, new Color(0.1f, 0.09f, 0.08f, 0.85f));
                 Fill(new Rect(lr.x, lr.y, lr.width * Mathf.Clamp01(lf), lr.height), lf >= 1f ? Sprites.Hex("e0703a") : Sprites.Hex("b0a080"));
-                GUI.Label(new Rect(lr.xMax + 6 * s, lr.y - 6 * s, 120 * s, 16 * s), $"LOAD {p.Load}/{p.Capacity}", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft });
+                Lbl(new Rect(lr.xMax + 6 * s, lr.y - 6 * s, 120 * s, 16 * s), $"LOAD {p.Load}/{p.Capacity}", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft });
             }
             // 换弹进度：头顶一条小进度条
             if (p.Reloading && Camera.main != null)
@@ -134,7 +135,7 @@ namespace NeonDrift
                 var bar = new Rect(hp2.x - 22 * s, Screen.height - hp2.y, 44 * s, 4 * s);
                 Fill(bar, new Color(0f, 0f, 0f, 0.6f));
                 Fill(new Rect(bar.x, bar.y, bar.width * p.ReloadProgress, bar.height), Sprites.Hex("d8a040"));
-                GUI.Label(new Rect(bar.x - 20 * s, bar.y - 16 * s, bar.width + 40 * s, 14 * s), "RELOAD", new GUIStyle(small) { normal = { textColor = Sprites.Hex("d8a040") } });
+                Lbl(new Rect(bar.x - 20 * s, bar.y - 16 * s, bar.width + 40 * s, 14 * s), "RELOAD", new GUIStyle(small) { normal = { textColor = Sprites.Hex("d8a040") } });
             }
 
             // 房间信息
@@ -144,9 +145,9 @@ namespace NeonDrift
                 string kind = room.Kind == RoomKind.Shop ? "Black Market" : room.Kind == RoomKind.Event ? "Event" : room.Kind == RoomKind.Signal ? "Ghost Channel" : "Combat";
                 string head = $"FLOODED DISTRICT · ROOM {room.Index}/{WorldBuilder.Part1Rooms} · {kind}";
                 string info = room.Cleared ? $"{head} · CLEARED" : $"{head} · WAVE {room.Wave}/{room.WaveCount} · {room.Alive} LEFT";
-                GUI.Label(new Rect(Screen.width - 260 * s, 10 * s, 250 * s, 20 * s), info, new GUIStyle(label) { alignment = TextAnchor.UpperRight });
+                Lbl(new Rect(Screen.width - 260 * s, 10 * s, 250 * s, 20 * s), info, new GUIStyle(label) { alignment = TextAnchor.UpperRight });
             }
-            GUI.Label(new Rect(Screen.width - 360 * s, 26 * s, 350 * s, 20 * s),
+            Lbl(new Rect(Screen.width - 360 * s, 26 * s, 350 * s, 20 * s),
                       $"{p.Weapon.name}  rate {p.fireRate:0.0}  dmg {p.bulletDamage:0.00}   (debug: 1-9, 0, - swap weapon)",
                       new GUIStyle(label) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Normal });
 
@@ -157,7 +158,7 @@ namespace NeonDrift
                 Vector3 sp = cam.WorldToScreenPoint(pk.transform.position + Vector3.up * 1.1f);
                 var bst = new GUIStyle(small) { wordWrap = true, normal = { textColor = pk.LabelColor } };
                 Fill(new Rect(sp.x - 75 * s, Screen.height - sp.y - 14 * s, 150 * s, 32 * s), new Color(0f, 0f, 0f, 0.5f));
-                GUI.Label(new Rect(sp.x - 75 * s, Screen.height - sp.y - 13 * s, 150 * s, 32 * s), pk.Label, bst);
+                Lbl(new Rect(sp.x - 75 * s, Screen.height - sp.y - 13 * s, 150 * s, 32 * s), pk.Label, bst);
             }
 
             // 地上能互动的东西：名字常驻，离得最近的那个显示操作提示
@@ -170,7 +171,7 @@ namespace NeonDrift
                 Color tc = it is WeaponPickup wpk ? wpk.LabelColor : new Color(0.8f, 0.75f, 0.68f);
                 var st = new GUIStyle(small) { normal = { textColor = it == cur ? Color.white : tc } };
                 if (it == cur) { st.fontStyle = FontStyle.Bold; Fill(new Rect(sp.x - 120 * s, Screen.height - sp.y - 14 * s, 240 * s, 30 * s), new Color(0f, 0f, 0f, 0.55f)); }
-                GUI.Label(new Rect(sp.x - 120 * s, Screen.height - sp.y - 12 * s, 240 * s, 30 * s), lb, st);
+                Lbl(new Rect(sp.x - 120 * s, Screen.height - sp.y - 12 * s, 240 * s, 30 * s), lb, st);
             }
 
             // 已经拿到的增益（右上角，房间信息下面）
@@ -183,7 +184,7 @@ namespace NeonDrift
                     if (b == null) continue;
                     sb.Append(b.name).Append(kv.Value > 1 ? $"×{kv.Value}" : "").Append("  ");
                 }
-                GUI.Label(new Rect(Screen.width - 360 * s, 42 * s, 350 * s, 40 * s), sb.ToString(),
+                Lbl(new Rect(Screen.width - 360 * s, 42 * s, 350 * s, 40 * s), sb.ToString(),
                           new GUIStyle(small) { alignment = TextAnchor.UpperRight, wordWrap = true });
             }
 
@@ -202,7 +203,7 @@ namespace NeonDrift
                     Fill(new Rect(sx < 0 ? px : px - l, py - th / 2f, l, th), bc);
                     Fill(new Rect(px - th / 2f, sy < 0 ? py : py - l, th, l), bc);
                 }
-                GUI.Label(new Rect(cx - 80 * s, cy + r + 2 * s, 160 * s, 16 * s), $"F {tg.HackName} ({tg.HackCost} RAM)",
+                Lbl(new Rect(cx - 80 * s, cy + r + 2 * s, 160 * s, 16 * s), $"F {tg.HackName} ({tg.HackCost} RAM)",
                           new GUIStyle(small) { normal = { textColor = bc } });
             }
 
@@ -216,8 +217,8 @@ namespace NeonDrift
                     var st2 = new GUIStyle(label) { alignment = TextAnchor.MiddleCenter, fontSize = Mathf.RoundToInt((pp.text == "CRIT" ? 15 : 11) * s * (k < 0.15f ? 1.3f : 1f)), normal = { textColor = c } };
                     var sh = new GUIStyle(st2) { normal = { textColor = new Color(0f, 0f, 0f, c.a * 0.8f) } };
                     var rr = new Rect(sp2.x - 60 * s, Screen.height - sp2.y - 12 * s, 120 * s, 24 * s);
-                    GUI.Label(new Rect(rr.x + 1 * s, rr.y + 1 * s, rr.width, rr.height), pp.text, sh);
-                    GUI.Label(rr, pp.text, st2);
+                    Lbl(new Rect(rr.x + 1 * s, rr.y + 1 * s, rr.width, rr.height), pp.text, sh);
+                    Lbl(rr, pp.text, st2);
                 }
 
             // 转场黑幕
@@ -228,9 +229,12 @@ namespace NeonDrift
             {
                 var r = new Rect(Screen.width / 2f - 260 * s, Screen.height - 110 * s, 520 * s, 60 * s);
                 Fill(r, new Color(0.03f, 0.02f, 0.06f, 0.75f));
-                GUI.Label(r, msg, big);
+                Lbl(r, msg, big);
             }
         }
+
+        /// <summary>所有文字都从这里画：先翻译成当前语言。</summary>
+        static void Lbl(Rect r, string t, GUIStyle st) => GUI.Label(r, Loc.T(t), st);
 
         void Fill(Rect r, Color c)
         {

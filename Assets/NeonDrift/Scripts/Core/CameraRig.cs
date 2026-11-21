@@ -65,7 +65,7 @@ namespace NeonDrift
 
         public static void Shake(float amount)
         {
-            if (I != null) I.shake = Mathf.Max(I.shake, amount);
+            if (I != null) I.shake = Mathf.Max(I.shake, amount * GameSettings.Shake);
         }
 
         void LateUpdate()

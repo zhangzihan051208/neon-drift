@@ -109,6 +109,7 @@ namespace NeonDrift
         void Die()
         {
             Effects.Burst(Center, baseColor);
+            Sfx.Play("enemy_death", 1f, Center);
             CameraRig.Shake(0.12f);
             GameRoot.Hitstop(0.035f);
             Protocols.OnEnemyDied(this);
@@ -175,6 +176,7 @@ namespace NeonDrift
         protected void Telegraph(bool on)
         {
             hp.SetBase(body, on ? Sprites.Hex("ffd23f") : baseColor);
+            if (on) Sfx.Play("enemy_telegraph", 0.8f, Center, 0.06f, 0.08f);
         }
 
         // ---------------------------------------------------------------- 骇入

@@ -1,0 +1,469 @@
+# NEON DRIFT 中文译文。格式：英文原文<TAB>译文。{0}{1} 是模板参数，\n 是换行。
+Common	普通
+Uncommon	改良
+Rare	精良
+Epic	史诗
+Legendary	传说
+Pistol	手枪
+Rifle	自动步枪
+Shotgun	霰弹枪
+Sniper	狙击步枪
+MG	机枪
+Blade	刀
+Blunt	钝器
+Explosive	爆炸武器
+Special	特殊武器
+Polearm	长柄
+Thrown	投掷
+Common Pistol	普通·手枪
+Common Rifle	普通·自动步枪
+Common Shotgun	普通·霰弹枪
+Common Sniper	普通·狙击步枪
+Common MG	普通·机枪
+Common Blade	普通·刀
+Common Blunt	普通·钝器
+Common Explosive	普通·爆炸武器
+Common Special	普通·特殊武器
+Common Polearm	普通·长柄
+Common Thrown	普通·投掷
+Uncommon Pistol	改良·手枪
+Uncommon Rifle	改良·自动步枪
+Uncommon Shotgun	改良·霰弹枪
+Uncommon Sniper	改良·狙击步枪
+Uncommon MG	改良·机枪
+Uncommon Blade	改良·刀
+Uncommon Blunt	改良·钝器
+Uncommon Explosive	改良·爆炸武器
+Uncommon Special	改良·特殊武器
+Uncommon Polearm	改良·长柄
+Uncommon Thrown	改良·投掷
+Rare Pistol	精良·手枪
+Rare Rifle	精良·自动步枪
+Rare Shotgun	精良·霰弹枪
+Rare Sniper	精良·狙击步枪
+Rare MG	精良·机枪
+Rare Blade	精良·刀
+Rare Blunt	精良·钝器
+Rare Explosive	精良·爆炸武器
+Rare Special	精良·特殊武器
+Rare Polearm	精良·长柄
+Rare Thrown	精良·投掷
+Epic Pistol	史诗·手枪
+Epic Rifle	史诗·自动步枪
+Epic Shotgun	史诗·霰弹枪
+Epic Sniper	史诗·狙击步枪
+Epic MG	史诗·机枪
+Epic Blade	史诗·刀
+Epic Blunt	史诗·钝器
+Epic Explosive	史诗·爆炸武器
+Epic Special	史诗·特殊武器
+Epic Polearm	史诗·长柄
+Epic Thrown	史诗·投掷
+Legendary Pistol	传说·手枪
+Legendary Rifle	传说·自动步枪
+Legendary Shotgun	传说·霰弹枪
+Legendary Sniper	传说·狙击步枪
+Legendary MG	传说·机枪
+Legendary Blade	传说·刀
+Legendary Blunt	传说·钝器
+Legendary Explosive	传说·爆炸武器
+Legendary Special	传说·特殊武器
+Legendary Polearm	传说·长柄
+Legendary Thrown	传说·投掷
+Short	短
+Mid	中
+Long	长
+Signature Blade	本命刀
+Nameless	「无铭」
+Signature weapon · 20% crit · bullets it cuts fly back	本命武器 · 暴击率 20% · 劈掉的子弹会反弹回去
+Alleyway Pistol	「巷战」手枪
+Reliable starter sidearm	稳定可靠的初始手枪
+Harmonic Smart Pistol	「谐波」智能手枪
+Bullets home in on the nearest enemy	子弹追踪最近的敌人
+Verdict Revolver	「审判」左轮
+Heavy rounds pierce 2 enemies	重弹穿透 2 个敌人
+Veteran Assault Rifle	「老兵」突击步枪
+Torrent SMG	「激流」冲锋枪
+Very fast, very wild	射得很快，也飘得很厉害
+Hornet Seeker SMG	「黄蜂」追踪冲锋枪
+Neon Hime Arc Rifle	「霓姬」电弧步枪
+Hits arc to 2 more enemies	命中后电弧再跳 2 个敌人
+Skullsplitter Shotgun	「碎颅」霰弹枪
+Sawn-Off Double Barrel	「锯短」双管霰弹
+10 pellets, shorter range	10 颗弹丸，射程更短
+Dragon's Breath Shotgun	「龙息」燃烧霰弹
+Pellets set enemies on fire	弹丸会点燃敌人
+Spike Bolt-Action	「长钉」栓动步枪
+Pierces 1 enemy	穿透 1 个敌人
+Ghost Unicorn Railsniper	「幽灵独角兽」电磁狙击
+Pierces 3 enemies	穿透 3 个敌人
+Wrath Railgun	「天谴」轨道炮
+Punches through a whole line; every hit arcs	贯穿一整排，每次命中都放电弧
+Meatgrinder HMG	「绞肉机」重机枪
+Downpour Minigun	「暴雨」转管机枪
+20 rounds/sec	每秒 20 发
+Pipe Machete	「钢管」砍刀
+Can cut bullets	能劈掉子弹
+Daybreak Thermal Katana	「白昼」热能武士刀
+Red-hot blade sets enemies on fire	烧红的刀刃会点燃敌人
+Mantis Arm Blades	「螳螂」臂刃
+5 slashes per second	每秒 5 刀
+Monomolecular Wire	「单分子线」
+Invisible wire sweeps 240° in front of you	看不见的细线扫过身前 240°
+Crowbar	「撬棍」
+Ironbreak Power Hammer	「铁破」动力大锤
+Huge slam, sends enemies flying	重重一砸，把敌人砸飞
+Demolisher Hydraulic Fists	「拆迁」液压拳套
+Fast punches, longest knockback	出拳快，击退最远
+Butterfly Knife	「蝴蝶」折刀
+The fastest short blade	最快的短刀
+Whirl Chain Blade	「回旋」链刃
+Whips a chain blade through 200°	甩出链刃扫过 200°
+Headsman Chainsaw Sword	「刽子手」链锯大剑
+Heavy sweeps that throw sparks	火星四溅的重扫
+Brass Knuckles	「铜指」指虎
+Rapid punches	连续快拳
+Stun Baton	「电击棍」
+Stuns enemies for 0.5s	麻痹敌人 0.5 秒
+Road Sign	「路牌」
+A ripped-up road sign. Swing it.	一块拔下来的路牌。抡就完了。
+Ice Pick	「冰锥」
+Five stabs a second	每秒刺 5 下
+Bayonet	「刺刀」
+Stabs through a whole line	一刺贯穿一整排
+Rebar Spear	「钢筋」长矛
+Rebar from a building site. Long reach.	工地上捡的钢筋，够得远。
+Fang Twin Daggers	「毒牙」双刺
+Alternating stabs, fastest melee	左右交替刺，最快的近战
+Piercer Mag-Lance	「穿心」电磁长枪
+Charged lance, pierces and stuns	充能长枪，穿透并麻痹
+Firework Grenade Launcher	「烟花」榴弹发射器
+Area explosion	范围爆炸
+Swarm Micro-Missiles	「蜂群」微型导弹
+3 homing missiles per shot	一次 3 枚追踪导弹
+Iron Star Shuriken	「铁星」手里剑
+Spins out; pick it back up where it lands	转着飞出去，落地后可以捡回来
+Willow Throwing Knives	「柳叶」飞刀
+Throws a fan of 3	一次扇形甩出 3 把
+Caltrops	「铁蒺藜」
+Scatter at the crosshair; hurts anyone who steps on them for 6s	撒在准星处，6 秒内踩上去的都会受伤
+Armorbreak Javelin	「破甲」标枪
+Pierces 2 enemies and pins them for 1s	穿透 2 个敌人，并把它们钉住 1 秒
+Moon Chakram	「月轮」飞轮
+Flies out and back, hits both ways, no pickup needed	飞出去再飞回来，来回都伤人，不用捡
+Senbon Needles	「千本」
+A handful of 10 needles	一把撒出 10 根针
+Mag Nailgun	「钉枪」电磁钉射器
+Nails pierce 2 enemies	钉子穿透 2 个敌人
+Furnace Flamethrower	「熔炉」火焰喷射器
+Flames pass through and ignite everything	火焰穿过并点燃一切
+Tether Arc Cannon	「链绳」电炮
+Arc jumps between 5 enemies	电弧在 5 个敌人之间连跳
+No power	不耗电
+no power	不耗电
+(empty gun slot)	（空枪槽）
+Retrievable	可回收
+Melee	近战
+RMB	右键
+RAM	RAM
+Q swap · R reload	Q 换枪 · R 换弹
+G drop gun · X drop melee	G 丢枪 · X 丢近战
+RELOAD	换弹
+CRIT	暴击
+PERFECT DODGE	完美闪避
++1 AMMO	+1 子弹
+Black Market	黑市
+Event	事件
+Ghost Channel	幽灵频道
+Combat	战斗
+Boss	Boss
+Next Room	下一间
+CLEARED	已清空
+FLOODED DISTRICT	积水区
+WASD move · LMB shoot · RMB melee · Space dash · R reload · Q swap · F hack · E interact	WASD 移动 · 左键开枪 · 右键近战 · 空格闪移 · R 换弹 · Q 换枪 · F 骇入 · E 交互
+Ammo is scarce: melee kills give bullets back	子弹很少：近战打倒敌人会返还子弹
+Old Ghost's black market: walk up to an item and press E to buy	老鬼的黑市：走到货物前按 E 购买
+End of the demo run. Press R for a new route	试玩到此结束。按 R 换一条新路线
+The boss fight is not built yet. End of chapter demo. Press R to start over	Boss 战还没做好，本章试玩结束。按 R 重新开始
+Cleared. Open the crate. Four ladders: combat, black market, event, ghost channel — pick one	清空了。打开浮箱。四架梯子：战斗、黑市、事件、幽灵频道——选一个
+Cleared. Open the crate, then climb the ladder on the back wall	清空了。打开浮箱，然后爬后墙上的梯子
+Choose an AI protocol	选一个 AI 协议
+Old Ghost's Market	老鬼的黑市
+E  Restock the weapon rack (₡25, once)	E  刷新武器货架（₡25，限一次）
+OLD GHOST: "Fresh stock. Don't ask where from."	老鬼：“新到的货。别问哪来的。”
+Ripperdoc	义体医生
+E  Lie on the table: one free implant (choose 1 of 3)	E  躺上手术台：免费装一个义体（三选一）
+RIPPERDOC: "Pick one. Anesthetic is extra. Kidding."	义体医生：“挑一个。麻药另算。开玩笑的。”
+Back-Alley Doc	黑诊所
+E  Sell blood to the back-alley doc: HP -1, Power +50	E  卖血给黑诊所：生命 -1，电量 +50
+DOC: "Any more and you'll be empty."	医生：“再抽你就空了。”
+HP -1, Power +50	生命 -1，电量 +50
+Slot Machine	投币机
+E  Insert ₡70: spits out a random weapon (Uncommon+)	E  投 ₡70：吐出一把随机武器（改良及以上）
+CLUNK — a weapon drops out	哐当——掉出一把武器
+Drifted Body	漂来的尸体
+E  Search the body: +35 credits, 30% chance his implant alarm goes off (HP -1)	E  搜尸：+35 信用点，30% 概率触发他的义体警报（生命 -1）
+Implant alarm blew up! +35 credits, HP -1	义体警报炸了！+35 信用点，生命 -1
++35 credits	+35 信用点
+Overload Transformer	过载变电箱
+Transformer overloaded: the puddle is live	变电箱过载：水坑带电了
+Live water! Stay out when it sparks and the box light blinks	漏电水坑！冒火花、箱子灯闪的时候别踩
+Short Circuit	短路
+Turret turned	炮台倒戈
+Nothing to hack nearby	附近没有可骇入的目标
+Turret	炮台
+GHOST CHANNEL BREACH	幽灵频道入侵
+Out of ammo. Melee (RMB) — melee kills give bullets back	没子弹了。用近战（右键）——近战打倒敌人会返还子弹
+No spare ammo	没有备用弹药
+Low power. Melee (RMB) to recharge, or Q to swap to a gun that needs none	电量不足。用近战（右键）充电，或按 Q 换一把不耗电的枪
+You have to keep at least one gun	至少要留一把枪
+Nameless is Zero's own blade. She won't drop it	「无铭」是零自己的刀。她不会丢下它
+Emergency shield absorbed the hit	应急护盾挡下了这一击
+Armor broken	护甲被打穿了
+Redline Shot	「红线针」
+Suture Gel	「缝合凝胶」
+Black Market Cell	「黑市电芯」
+Ammo Crate	「弹药箱」
+Overload Battery	「过载电池」
+HP +1	生命 +1
+HP +2	生命 +2
+Power +30	电量 +30
+Power +60	电量 +60
++1 magazine for the gun in hand	手上的枪 +1 弹夹
+HP is full. Save it for later	生命是满的，留着以后用
+Power is full. Save it for later	电量是满的，留着以后用
+E  Open the drift crate	E  打开浮箱
+Drift Crate	浮箱
+G drops your gun, X drops your melee weapon	G 丢枪，X 丢近战武器
+Overclock	「超频」
+Fire rate +20%	射速 +20%
+Breach	「破甲」
+Damage +25%	伤害 +25%
+Refract	「折射」
+Bullets bounce off walls once (stacks)	子弹撞墙反弹 1 次（可叠加）
+Hunter Chip	「猎杀芯片」
+Crit chance +15%	暴击率 +15%
+Lethal	「致命」
+Crit damage +50% (x2 -> x2.5)	暴击伤害 +50%（×2 → ×2.5）
+Weak Point Scan	「弱点扫描」
++25% crit chance vs stunned, burning or turned enemies	对麻痹、着火、倒戈的敌人暴击率 +25%
+Afterglow	「余韵」
+After a crit, shoot and swing 30% faster for 1s	暴击后 1 秒内，开枪和挥刀都快 30%
+Power Saver	「节能回路」
+All weapons use 30% less power	所有武器耗电 -30%
+Speed Loader	「快速装填」
+Reload 35% faster	换弹快 35%
+Extended Mags	「扩容弹匣」
+All gun magazines +30%	所有枪的弹夹 +30%
+Close Quarters	「贴身流」
+Melee damage +25%; melee kills restore 1 armor	近战伤害 +25%；近战打倒敌人回 1 格护甲
+Redundancy	「冗余」
+Max HP +1 and heal 1	生命上限 +1，并回复 1 点生命
+Subdermal Plating	「皮下装甲」
+All damage taken -20%	受到的所有伤害 -20%
+Ballistic Deflector	「弹道偏折」
+Bullet damage taken -35%	受到的子弹伤害 -35%
+Parry Reflex	「格挡反射」
+Melee damage taken -40%	受到的近战伤害 -40%
+Fireproof Layer	「阻燃层」
+Fire damage taken -60%	受到的火焰伤害 -60%
+Insulation	「绝缘层」
+Shock damage taken -60% (live water)	受到的电击伤害 -60%（漏电水坑）
+Blast Padding	「防爆衬垫」
+Explosion damage taken -50%	受到的爆炸伤害 -50%
+Emergency Shield	「应急护盾」
+The first hit in each room does nothing	每间房第一次受伤无效
+Reactive Armor	「反应装甲」
+Getting hurt sets off a shockwave: knockback + 2 damage	受伤时炸开冲击波：击退 + 2 点伤害
+Aftershock Buffer	「余震缓冲」
++0.5s invulnerability after getting hurt	受伤后的无敌时间 +0.5 秒
+Clotting Nanites	「止血纳米」
+Heal 1 HP after clearing each room	每清完一间房回复 1 点生命
+Composite Plates	「复合装甲板」
+Max armor +1	护甲上限 +1
+Nano Repair	「纳米修复」
+Armor regenerates 50% faster	护甲恢复快 50%
+Overcharged Armor	「过载护甲」
+Losing armor shocks enemies within 2.5 tiles (3 damage)	护甲被打掉时电击 2.5 格内的敌人（3 点伤害）
+Full Plate Assault	「满甲突击」
+Damage +20% while armor is full	护甲全满时伤害 +20%
+Double Dash	「双冲」
+Dash cooldown -35%	闪移冷却 -35%
+Exoskeleton	「外骨骼」
+Carry capacity +3	负重上限 +3
+Spring Legs	「弹簧腿」
+Move speed +12%	移动速度 +12%
+Quickdraw	「快拔」
+Pistols: fire rate +40%, damage +20%	手枪：射速 +40%，伤害 +20%
+Stabilizer	「稳定器」
+Rifles: spread -60%, damage +20%	自动步枪：散布 -60%，伤害 +20%
+Heavy Shot	「重弹」
+Shotguns: +3 pellets, range +25%	霰弹枪：弹丸 +3，射程 +25%
+Falcon Eye	「猎鹰之眼」
+Snipers: damage +50%, pierce 2 more	狙击步枪：伤害 +50%，多穿透 2 个敌人
+Belt Feed	「供弹链」
+MGs: power use -40%, fire rate +15%	机枪：耗电 -40%，射速 +15%
+Hidden Blades	「暗器」
+Thrown: damage +30%, longer pickup range, 20% chance not to use one	投掷：伤害 +30%，拾取范围更大，20% 概率不消耗
+Iaido	「拔刀术」
+Blades: first swing after 1.5s of rest always crits	刀：1.5 秒没出刀后的第一刀必定暴击
+Titanium Edge	「钛骨刀锋」
+Blades: reach +30%, damage +30%	刀：挥砍范围 +30%，伤害 +30%
+Servo Arms	「伺服」
+Blunt: damage +40%, speed +20%, knockback +50%	钝器：伤害 +40%，攻速 +20%，击退 +50%
+High Explosive	「高爆」
+Explosives: radius +40%, blast damage +40%	爆炸武器：爆炸半径 +40%，爆炸伤害 +40%
+Overheat Core	「过热核心」
+Specials: burn damage x2, arcs jump 2 more times	特殊武器：点燃伤害 ×2，电弧多跳 2 次
+Skewer	「串刺」
+Polearms: reach +25%, damage +30%	长柄：距离 +25%，伤害 +30%
+Scavenger	「拾荒者」
+Enemies drop 50% more credits	敌人掉的信用点 +50%
+Charge Recycler	「残电回收」
+Enemies always drop charge, +2 power each	敌人必掉残电，每格 +2 电量
+Offense	攻击
+Survival	生存
+Weapon Mastery	武器专精
+AI Protocol	AI 协议
+Resource	资源
+NEON HIME	霓姬
+FORGEHEART	熔心
+DOORMAN	门客
+NEON HIME: "The audience left, Zero. Will you be my only stage?"	霓姬：“观众都走了，零。你愿意做我唯一的舞台吗？”
+FORGEHEART: "This city owes me a furnace. Lend me your hands."	熔心：“这座城欠我一座熔炉。借你的手一用。”
+DOORMAN: "Old friend. The Flux backdoor is still open for you."	门客：“老朋友。流光会的后门还给你留着。”
+Attack	攻击
+Arc Rounds	「电弧弹」
+Gun hits arc to 1 more enemy	枪的子弹命中后，电弧再跳 1 个敌人
+Thunder Edge	「雷刃」
+Melee hits stun for 0.6s and throw an arc	近战打中的敌人麻痹 0.6 秒，并放出一道电弧
+Dash	闪移
+Static Trail	「电痕」
+Dashing leaves a shocking trail for 1.5s	闪移路径留下电痕 1.5 秒
+Swap	换武器
+Swap Discharge	「换手放电」
+Swapping guns discharges around you (3s cooldown)	换武器时在身边放电（3 秒冷却）
+Armor	护甲
+Static Shell	「静电外壳」
+Losing armor stuns enemies within 3 tiles for 1.2s	护甲被打掉时，3 格内的敌人麻痹 1.2 秒
+Hack	骇入
+Broadcast	「广播」
+Hacks also arc to 3 nearby enemies	骇入时电弧额外跳向附近 3 个敌人
+Passive	被动
+Conduction	「导电」
+Shocking an enemy in a puddle electrifies the whole puddle	电击站在水坑里的敌人时，整片积水带电
+Crit	暴击
+Overload Crit	「过载暴击」
+Crits throw arcs to 2 nearby enemies	暴击时放出电弧，跳向附近 2 个敌人
+Hot Rounds	「热弹」
+All attacks set enemies on fire	所有攻击都会点燃敌人
+Molten Edge	「熔刃」
+Melee damage +30% and sets enemies on fire	近战伤害 +30%，并点燃敌人
+Fire Line	「火线」
+Dashing leaves a wall of fire for 1.5s	闪移路径留下火墙 1.5 秒
+Hot Swap	「换膛」
+For 2s after swapping, bullets set enemies on fire	换武器后 2 秒内子弹点燃敌人
+Molten Shell	「熔壳」
+Losing armor sprays fire around you	护甲被打掉时喷出一圈火
+Overheat	「过热」
+Hacked enemies catch fire	被骇入的敌人着火
+Ember Burst	「余烬爆」
+Burning enemies explode when they die	着火的敌人死掉时爆开
+Melting Point	「熔点」
+Crits ignite; +50% crit damage vs burning enemies	暴击会点燃敌人；对着火的敌人暴击伤害 +50%
+Seeker	「寻的」
+Gun bullets gently home in	枪的子弹轻微追踪敌人
+Turncoat	「倒戈」
+Hacking turns an enemy to your side for 4s	骇入让敌人倒戈 4 秒
+Expansion	「扩容」
+Max RAM +1, regenerates 30% faster	RAM 上限 +1，恢复快 30%
+Quick Jack	「快速接入」
+Hacks need no charge-up for 1.5s after a dash	闪移后 1.5 秒内骇入不用蓄力
+Sleight of Hand	「换手」
++30% crit for 1.5s after swapping guns	换枪后 1.5 秒内暴击率 +30%
+Scapegoat	「替罪羊」
+Losing armor turns the nearest enemy for 3s	护甲被打掉时，最近的敌人倒戈 3 秒
+Contacts	「人脉」
+One enemy in each room's first wave switches sides for 6s	每间房第一波敌人里，随机一个倒戈 6 秒
+Exploit	「漏洞利用」
+Always crit stunned enemies	对麻痹中的敌人必定暴击
+Start Run	开始游戏
+Settings	设置
+Controls	操作说明
+Quit	退出
+Resume	继续
+Restart Run	重新开始这一局
+Quit to Title	回到标题
+Quit Game	退出游戏
+PAUSED	暂停
+SETTINGS	设置
+CONTROLS	操作说明
+Language	语言
+Master Volume	总音量
+Weapon Volume	武器音量
+Effects Volume	音效音量
+Ambience (Rain)	环境音（雨声）
+Screen Shake	屏幕震动
+Fullscreen	全屏
+VSync	垂直同步
+On	开
+Off	关
+Back	返回
+Keyboard & Mouse	键鼠
+Gamepad	手柄
+Move	移动
+Aim	瞄准
+Mouse	鼠标
+Shoot	开枪
+Left Mouse	左键
+Right Mouse	右键
+Space	空格
+Reload	换弹
+Swap Gun	换枪
+Q / Wheel	Q / 滚轮
+Interact	交互
+Drop Gun / Melee	丢枪 / 丢近战
+Pause	暂停
+↑↓ Select · ←→ Adjust · Enter Confirm · Esc Back	↑↓ 选择 · ←→ 调整 · Enter 确认 · Esc 返回
+A cyberpunk roguelike. It never stops raining in the Flooded District.	赛博朋克肉鸽。积水区的雨从来没停过。
+{0} power/shot	每发耗电 {0}
+{0} pwr	耗电 {0}
+Mag {0}	弹夹 {0}
+Wt {0}	重 {0}
+Crit {0}%	暴击 {0}%
+Carry {0}	携带 {0}
+{0} reach	{0}距离
+{0}   {1}/{2} left	{0}   剩 {1}/{2}
+POWER {0}	电量 {0}
+₡ {0}	₡ {0}
+LOAD {0}/{1}	负重 {0}/{1}
+FLOODED DISTRICT	积水区
+FLOODED DISTRICT · ROOM {0}/{1} · {2} · WAVE {3}/{4} · {5} LEFT	积水区 · 第 {0}/{1} 间 · {2} · 第 {3}/{4} 波 · 剩 {5} 个
+FLOODED DISTRICT · ROOM {0}/{1} · {2} · CLEARED	积水区 · 第 {0}/{1} 间 · {2} · 已清空
+F {0} ({1} RAM)	F {0}（{1} RAM）
+{0}  rate {1}  dmg {2}   (debug: 1-9, 0, - swap weapon)	{0}  射速 {1}  伤害 {2}   （调试：1-9、0、- 切换武器）
+{0}×{1}	{0}×{1}
++{0} {1}	+{0} {1}
+Event: {0}	事件：{0}
+Room {0}	第 {0} 间
+You died (death #{0}). Press R to restart at the clinic	你死了（第 {0} 次）。按 R 回诊所重来
+GHOST CHANNEL BREACH	幽灵频道入侵
+{0}  ₡90	{0}  ₡90
+E  Install implant {0} (₡90)	E  安装义体 {0}（₡90）
+Implant installed: {0}	已安装义体：{0}
+Not enough RAM ({0} needs {1})	RAM 不够（{0} 需要 {1}）
+All your {0} are out there. Pick them up, or use melee (RMB)	你的{0}都扔出去了。去捡回来，或者用近战（右键）
+Dropped {0} (load {1}/{2})	丢下了{0}（负重 {1}/{2}）
+Dropped {0}, back to Nameless (load {1}/{2})	丢下了{0}，换回「无铭」（负重 {1}/{2}）
+{0} · {1} ({2})	{0} · {1}（{2}）
+{0}  ₡{1}	{0}  ₡{1}
+Load after pickup {0}/{1}	捡起后负重 {0}/{1}
+TOO HEAVY! {0}/{1} (G drop gun · X drop melee)	太重了！{0}/{1}（G 丢枪 · X 丢近战）
+E  Buy {0} (₡{1})	E  购买{0}（₡{1}）
+E  Pick up {0}	E  捡起{0}
+Too heavy: {0} weighs {1}, load would be {2}/{3}	太重了：{0}重 {1}，捡起后负重会是 {2}/{3}
+Not enough credits (need ₡{0} more)	信用点不够（还差 ₡{0}）
+E  Use {0}	E  使用{0}
+E  Climb: {0}	E  爬梯子：{0}
+{0}: {1}	{0}：{1}
+[{0}] {1}	【{0}】{1}

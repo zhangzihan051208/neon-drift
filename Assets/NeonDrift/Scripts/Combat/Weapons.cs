@@ -18,7 +18,7 @@ namespace NeonDrift
         public float damage = 1f;
         public float spread = 2f;                // 散布（度）
         public int pellets = 1;                  // 一次打出几发
-        public int bounces;                      // 撞墙反弹次数
+        public int bounces;                      // 撞墙反弹次数（武器本身都是 0，只有「折射」buff 才会反弹）
         public int pierce;                       // 能穿过几个敌人
         public float life = 2f;                  // 子弹飞多久
         public float radius = 0.1f;              // 子弹判定半径
@@ -82,8 +82,8 @@ namespace NeonDrift
         public static readonly WeaponDef[] All =
         {
             // ---------------- 手枪
-            new WeaponDef { name = "Alleyway Pistol", mag = 7, reload = 1.0f, category = "手枪", rarity = Rarity.Common, energy = 0f, fireRate = 1.0f, speed = 13f, damage = 1.8f, spread = 2f, bounces = 1,
-                            bullet = "pistol", color = H("ffb347"), muzzle = 5, trail = 2f, shake = 0.04f, special = "Bullets bounce off walls once" },
+            new WeaponDef { name = "Alleyway Pistol", mag = 7, reload = 1.0f, category = "手枪", rarity = Rarity.Common, energy = 0f, fireRate = 1.0f, speed = 13f, damage = 1.8f, spread = 2f,
+                            bullet = "pistol", color = H("ffb347"), muzzle = 5, trail = 2f, shake = 0.04f, special = "Reliable starter sidearm" },
             new WeaponDef { name = "Harmonic Smart Pistol", mag = 9, reload = 1.1f, category = "手枪", rarity = Rarity.Rare, energy = 1.3f, fireRate = 1.3f, speed = 14f, damage = 2.0f, spread = 3f,
                             homing = 260f, bullet = "smart", color = H("ff7ae0"), muzzle = 5, trail = 2f, shake = 0.04f, special = "Bullets home in on the nearest enemy" },
             new WeaponDef { name = "Verdict Revolver", mag = 6, reload = 1.6f, category = "手枪", rarity = Rarity.Epic, energy = 3.3f, fireRate = 0.6f, speed = 24f, damage = 6.0f, spread = 0.5f, pierce = 2,
@@ -114,8 +114,8 @@ namespace NeonDrift
             // ---------------- 机枪
             new WeaponDef { name = "Meatgrinder HMG", mag = 22, reload = 2.4f, category = "机枪", rarity = Rarity.Uncommon, energy = 0.44f, fireRate = 7.0f, speed = 16f, damage = 0.5f, spread = 11f,
                             bullet = "mg", color = H("ffcf5a"), muzzle = 6, trail = 2f, shake = 0.025f },
-            new WeaponDef { name = "Downpour Minigun", mag = 26, reload = 2.8f, category = "机枪", rarity = Rarity.Epic, energy = 0.5f, fireRate = 10.0f, speed = 17f, damage = 0.5f, spread = 12f, bounces = 1,
-                            bullet = "mg", color = H("ffa040"), muzzle = 7, trail = 2f, shake = 0.03f, special = "20 rounds/sec, bullets bounce once" },
+            new WeaponDef { name = "Downpour Minigun", mag = 26, reload = 2.8f, category = "机枪", rarity = Rarity.Epic, energy = 0.5f, fireRate = 10.0f, speed = 17f, damage = 0.5f, spread = 12f,
+                            bullet = "mg", color = H("ffa040"), muzzle = 7, trail = 2f, shake = 0.03f, special = "20 rounds/sec" },
             // ---------------- 刀（不耗电）
             new WeaponDef { name = "Pipe Machete", category = "刀", rarity = Rarity.Common, melee = 1, fireRate = 2.6f, damage = 1.5f, range = 1.7f, arc = 130f,
                             color = H("d8c8b0"), shake = 0.05f, special = "Can cut bullets" },

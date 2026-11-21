@@ -34,6 +34,7 @@ namespace NeonDrift
         void Update()
         {
             if (p == null || p.IsDead) { Target = null; Charging = false; return; }
+            if (Menus.Blocking) return;
             Ram = Mathf.Min(MaxRam, Ram + Time.deltaTime / RegenTime);
             if (p.Frozen) { Target = null; Charging = false; return; }
 
@@ -53,12 +54,13 @@ namespace NeonDrift
             if (Target == null) { GreyboxHUD.Message("Nothing to hack nearby", 0.8f); return; }
             if (Ram < Target.HackCost)
             {
-                if (Time.time - lastNoRam > 1f) { lastNoRam = Time.time; GreyboxHUD.Message($"Not enough RAM ({Target.HackName} needs {Target.HackCost})", 1f); }
+                if (Time.time - lastNoRam > 1f) { lastNoRam = Time.time; Sfx.Play("no_ram"); GreyboxHUD.Message($"Not enough RAM ({Target.HackName} needs {Target.HackCost})", 1f); }
                 return;
             }
             chargeTarget = Target;
             chargeT = 0f;
             Charging = true;
+            Sfx.Play("hack_charge");
             if (p.N("m_dash") > 0 && Time.time - p.LastDashEnd < 1.5f) Fire(chargeTarget);    // 门客「快速接入」：闪移后不用蓄力
         }
 
@@ -66,6 +68,7 @@ namespace NeonDrift
         {
             Charging = false;
             Ram -= h.HackCost;
+            Sfx.Play("hack_fire");
             PixelFx.Play(PixelFx.Glitch(12), h.HackPoint, 0f, HackCol, 20f);
             Effects.Flash(h.HackPoint, HackCol, 2.5f, 1.2f, 0.1f);
             CameraRig.Shake(0.06f);
