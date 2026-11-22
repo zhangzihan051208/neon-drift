@@ -113,6 +113,14 @@ namespace NeonDrift
             root.SetParent(t, false);
             root.localPosition = new Vector2(0, 6f / Sprites.PPU);
             root.localRotation = Quaternion.Euler(0, 0, 18f);
+            var art = WeaponArt.GetSprite(w);
+            if (art != null)                                                    // 有像素图就用像素图（斜放在地上，下面一块影子）
+            {
+                Px(t, len + 4, 2, new Color(0f, 0f, 0f, 0.45f), new Vector2(0, 1));
+                var sr = Sprites.Make(root, "art", art, Color.white, 1, Vector2.zero);
+                sr.transform.localPosition = new Vector2(-(art.rect.width * 0.5f - art.pivot.x) / WeaponArt.PPU, 0f);   // 让武器中间对准拾取点
+                return;
+            }
             Px(root, len + 2, 6, Sprites.Hex("15161a"), Vector2.zero);
             Px(root, len, 4, w.color, Vector2.zero, 1);
             if (w.melee == 0) Px(root, 3, 5, Sprites.Hex("2a2b30"), new Vector2(-len / 4f, -4), 1);       // 握把

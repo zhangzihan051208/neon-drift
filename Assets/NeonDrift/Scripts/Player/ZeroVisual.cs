@@ -46,12 +46,48 @@ namespace NeonDrift
                 return null;
             }
             body.color = Color.white;
-            if (gun != null) gun.transform.localScale = Vector3.zero;     // 枪已经画在身上，不再显示绕身转的那把
             if (visor != null) DestroyImmediate(visor.gameObject);
             hp.CaptureColors();
             Debug.Log("零的动作已接入（PixelLab 版，四方向）：站立、走路、跑步、闪移、开枪、边走边打。");
             return visual;
         }
+
+        // ---------------------------------------------------------------- 持武器姿势 + 八方向
+        /// <summary>
+        /// 现在手上这类武器用哪套姿势：pistol 单手、rifle 双手长枪、heavy 重武器、thrown 投掷，近战时 slash / thrust / blunt。
+        /// 动作图按「动作_姿势_方向」找，比如 idle_rifle_ne；找不到就退到「动作_方向」（现在的四方向图）。
+        /// 带姿势的图里手是空的（摆好握枪的姿势），武器由 PlayerController 单独画一层拿在手上。
+        /// </summary>
+        public string Pose = "pistol";
+        /// <summary>手上那层武器图要不要显示（用画死的手枪开枪时不显示，免得手里两把枪）。</summary>
+        public bool LayerVisible { get; private set; } = true;
+        /// <summary>这一下开枪用的是人物图里画死的那把手枪（枪口在伸直的手臂末端）。</summary>
+        public bool BakedPistol { get; private set; }
+
+        public static string PoseOf(WeaponDef w, bool melee)
+        {
+            if (w == null) return "pistol";
+            if (melee || w.melee > 0) return w.melee == 3 ? "thrust" : w.melee == 2 ? "blunt" : "slash";
+            if (w.thrown) return "thrown";
+            switch (w.category)
+            {
+                case "手枪": return "pistol";
+                case "机枪": case "爆炸武器": return "heavy";
+                default: return "rifle";
+            }
+        }
+
+        static readonly string[] Dir8 = { "e", "ne", "n", "nw", "w", "sw", "s", "se" };
+        static string Key8(Vector2 v)
+        {
+            float a = Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+            return Dir8[((Mathf.RoundToInt(a / 45f) % 8) + 8) % 8];
+        }
+        string dir8 = "s";
+        Vector2 lastLook = Vector2.down;
+        /// <summary>八方向里离它最近的四方向（斜方向归到左右，和 PlayerController 判断朝向的规则一致）。</summary>
+        static string Key4(Vector2 v) => Mathf.Abs(v.x) > Mathf.Abs(v.y) ? (v.x > 0 ? "e" : "w") : (v.y > 0 ? "n" : "s");
+        bool Has(string anim, string dir) => anims.ContainsKey(anim + "_" + dir);
 
         /// <summary>告诉外观现在瞄的方向（正面开枪时决定往左下还是右下）。</summary>
         public void SetAim(Vector2 a) { if (a.sqrMagnitude > 0.0001f) aim = a; }
@@ -101,10 +137,13 @@ namespace NeonDrift
             }
         }
 
+        /// <summary>按「带姿势的八方向 → 带姿势的四方向 → 八方向 → 四方向 → 站立」的顺序找图。</summary>
         Sprite Frame(string anim, string dir, int i)
         {
-            if (!anims.TryGetValue(anim + "_" + dir, out var a) || a.Length == 0)
-                if (!anims.TryGetValue("idle_" + dir, out a) || a.Length == 0) return body.sprite;
+            Sprite[] a = null;
+            foreach (var k in new[] { $"{anim}_{Pose}_{dir8}", $"{anim}_{Pose}_{dir}", $"{anim}_{dir8}", $"{anim}_{dir}", $"idle_{dir}" })
+                if (anims.TryGetValue(k, out a) && a.Length > 0) break;
+            if (a == null || a.Length == 0) return body.sprite;
             return a[((i % a.Length) + a.Length) % a.Length];
         }
 
@@ -114,6 +153,19 @@ namespace NeonDrift
             string dir = Key(facing);
             bool flip = false;
             Sprite sprite;
+
+            // 八方向：开枪/瞄准时跟着瞄准方向，走动时跟着移动方向，站着不动时跟着朝向
+            // 站着不动时保持最后一次的八方向（走到斜方向停下就面朝斜方向站着）
+            Vector2 vel = rb != null ? rb.linearVelocity : Vector2.zero;
+            if (gunPhase != GunPhase.Off) lastLook = aim;
+            else if (moving && vel.sqrMagnitude > 0.5f) lastLook = vel;
+            if (Key4(lastLook) != dir) lastLook = dir == "e" ? Vector2.right : dir == "w" ? Vector2.left : dir == "n" ? Vector2.up : Vector2.down;   // 和四方向朝向对不上时以朝向为准
+            dir8 = Key8(lastLook);
+            // 有这套姿势的开枪图（手是空的）就用它，武器图一直显示；没有的话手枪用画死的那把，其他武器不播开枪图
+            bool poseShoot = Has("shoot_" + Pose, dir) || Has("shoot_" + Pose, dir8);
+            bool bakedOk = Pose == "pistol" && !poseShoot && Has("shoot", dir);
+            BakedPistol = bakedOk;
+            LayerVisible = !(bakedOk && gunPhase != GunPhase.Off);
 
             if (dashing) { gunPhase = GunPhase.Off; hitting = false; }
             else if (fired) NoteFire();
@@ -131,6 +183,13 @@ namespace NeonDrift
                 int f = u < 0.15f ? 0 : u < 0.5f ? 1 : u < 0.85f ? 2 : 3;
                 sprite = Frame("dash", dd, f);
             }
+            else if (gunPhase != GunPhase.Off && !poseShoot && !bakedOk)
+            {
+                AdvanceGun();                                                  // 这把武器没有开枪图：身体照常走/站，手上那层武器自己瞄准
+                if (mode == 2) sprite = Frame("run", dir, Mathf.FloorToInt(locoTime * 13f));
+                else if (mode == 1) sprite = Frame("walk", dir, Mathf.FloorToInt(locoTime * 10f));
+                else sprite = Frame("idle", dir, Mathf.FloorToInt(locoTime * 4f));
+            }
             else if (gunPhase != GunPhase.Off)
             {
                 bool kick = gunPhase == GunPhase.Recoil && gunTime < 0.11f;
@@ -140,13 +199,13 @@ namespace NeonDrift
                     sprite = Frame("walkshoot", dir, step + (kick ? 6 : 0));
                 }
                 else sprite = Frame("shoot", dir, ShootFrame());
-                if (dir == "s") flip = aim.x < 0f;                          // 正面的开枪图朝右下，往左下打时镜像
+                if (dir == "s" && bakedOk) flip = aim.x < 0f;              // 正面的开枪图朝右下，往左下打时镜像
                 AdvanceGun();
             }
             else if (hitting)
             {
                 hitTime += Time.deltaTime;
-                sprite = Frame("idle", dir, 0);
+                sprite = Frame("hit", dir, Mathf.Min(2, Mathf.FloorToInt(hitTime / PlayerController.HitStun * 3f)));   // 没有受击图时自动用站立图
                 if (hitTime >= PlayerController.HitStun) hitting = false;          // 受击姿势和硬直一样长
             }
             else if (mode == 2) sprite = Frame("run", dir, Mathf.FloorToInt(locoTime * 13f));
@@ -155,7 +214,6 @@ namespace NeonDrift
 
             body.sprite = sprite;
             body.flipX = flip;
-            if (gun != null) gun.transform.localScale = Vector3.zero;
             UpdateCoat(dir, dashing);
         }
 
@@ -226,9 +284,9 @@ namespace NeonDrift
                 tex.wrapMode = TextureWrapMode.Clamp;
                 string name = Path.GetFileNameWithoutExtension(png);
                 tex.name = name;
-                if (tex.height != CellH || tex.width % CellW != 0)
+                if (tex.height < CellH || tex.width % CellW != 0)              // 比 180 高的图（死亡倒地）是在下边多留了几行，脚底仍在原来那一行
                 {
-                    Debug.LogWarning($"零的动作图尺寸不对：{name} 是 {tex.width}×{tex.height}，每帧应为 {CellW}×{CellH}");
+                    Debug.LogWarning($"零的动作图尺寸不对：{name} 是 {tex.width}×{tex.height}，每帧应为 {CellW}×{CellH}（可以更高，多出来的放在下边）");
                     continue;
                 }
                 keep.Add(tex);
@@ -236,7 +294,7 @@ namespace NeonDrift
                 var frames = new Sprite[n];
                 for (int i = 0; i < n; i++)
                 {
-                    frames[i] = Sprite.Create(tex, new Rect(i * CellW, 0, CellW, CellH), new Vector2(0.5f, Foot / (float)CellH), PPU, 0, SpriteMeshType.FullRect);
+                    frames[i] = Sprite.Create(tex, new Rect(i * CellW, 0, CellW, tex.height), new Vector2(0.5f, (Foot + tex.height - CellH) / (float)tex.height), PPU, 0, SpriteMeshType.FullRect);
                     frames[i].name = name + i;
                     keep.Add(frames[i]);
                 }

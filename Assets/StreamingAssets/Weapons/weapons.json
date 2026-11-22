@@ -1,0 +1,317 @@
+{
+ "nameless": {
+  "name": "Nameless",
+  "w": 56,
+  "h": 11,
+  "pivotX": 0.1518,
+  "pivotY": 0.5
+ },
+ "alleyway_pistol": {
+  "name": "Alleyway Pistol",
+  "w": 24,
+  "h": 15,
+  "pivotX": 0.3125,
+  "pivotY": 0.2333
+ },
+ "harmonic_smart_pistol": {
+  "name": "Harmonic Smart Pistol",
+  "w": 26,
+  "h": 15,
+  "pivotX": 0.2885,
+  "pivotY": 0.2333
+ },
+ "verdict_revolver": {
+  "name": "Verdict Revolver",
+  "w": 30,
+  "h": 16,
+  "pivotX": 0.2167,
+  "pivotY": 0.2812
+ },
+ "veteran_assault_rifle": {
+  "name": "Veteran Assault Rifle",
+  "w": 46,
+  "h": 17,
+  "pivotX": 0.337,
+  "pivotY": 0.2647
+ },
+ "torrent_smg": {
+  "name": "Torrent SMG",
+  "w": 32,
+  "h": 17,
+  "pivotX": 0.3594,
+  "pivotY": 0.3235
+ },
+ "hornet_seeker_smg": {
+  "name": "Hornet Seeker SMG",
+  "w": 34,
+  "h": 17,
+  "pivotX": 0.3382,
+  "pivotY": 0.3235
+ },
+ "neon_hime_arc_rifle": {
+  "name": "Neon Hime Arc Rifle",
+  "w": 46,
+  "h": 18,
+  "pivotX": 0.337,
+  "pivotY": 0.25
+ },
+ "skullsplitter_shotgun": {
+  "name": "Skullsplitter Shotgun",
+  "w": 46,
+  "h": 16,
+  "pivotX": 0.3152,
+  "pivotY": 0.2812
+ },
+ "sawn_off_double_barrel": {
+  "name": "Sawn-Off Double Barrel",
+  "w": 32,
+  "h": 15,
+  "pivotX": 0.2031,
+  "pivotY": 0.3
+ },
+ "dragon_s_breath_shotgun": {
+  "name": "Dragon's Breath Shotgun",
+  "w": 46,
+  "h": 17,
+  "pivotX": 0.3152,
+  "pivotY": 0.3235
+ },
+ "spike_bolt_action": {
+  "name": "Spike Bolt-Action",
+  "w": 56,
+  "h": 16,
+  "pivotX": 0.2946,
+  "pivotY": 0.2812
+ },
+ "ghost_unicorn_railsniper": {
+  "name": "Ghost Unicorn Railsniper",
+  "w": 58,
+  "h": 18,
+  "pivotX": 0.2845,
+  "pivotY": 0.1944
+ },
+ "wrath_railgun": {
+  "name": "Wrath Railgun",
+  "w": 62,
+  "h": 20,
+  "pivotX": 0.2823,
+  "pivotY": 0.175
+ },
+ "meatgrinder_hmg": {
+  "name": "Meatgrinder HMG",
+  "w": 54,
+  "h": 20,
+  "pivotX": 0.287,
+  "pivotY": 0.225
+ },
+ "downpour_minigun": {
+  "name": "Downpour Minigun",
+  "w": 52,
+  "h": 22,
+  "pivotX": 0.3558,
+  "pivotY": 0.2045
+ },
+ "pipe_machete": {
+  "name": "Pipe Machete",
+  "w": 38,
+  "h": 13,
+  "pivotX": 0.1447,
+  "pivotY": 0.5
+ },
+ "daybreak_thermal_katana": {
+  "name": "Daybreak Thermal Katana",
+  "w": 54,
+  "h": 11,
+  "pivotX": 0.1389,
+  "pivotY": 0.5
+ },
+ "mantis_arm_blades": {
+  "name": "Mantis Arm Blades",
+  "w": 32,
+  "h": 16,
+  "pivotX": 0.1719,
+  "pivotY": 0.4688
+ },
+ "monomolecular_wire": {
+  "name": "Monomolecular Wire",
+  "w": 42,
+  "h": 16,
+  "pivotX": 0.1071,
+  "pivotY": 0.4688
+ },
+ "crowbar": {
+  "name": "Crowbar",
+  "w": 40,
+  "h": 14,
+  "pivotX": 0.2625,
+  "pivotY": 0.4643
+ },
+ "ironbreak_power_hammer": {
+  "name": "Ironbreak Power Hammer",
+  "w": 48,
+  "h": 20,
+  "pivotX": 0.1354,
+  "pivotY": 0.475
+ },
+ "demolisher_hydraulic_fists": {
+  "name": "Demolisher Hydraulic Fists",
+  "w": 28,
+  "h": 18,
+  "pivotX": 0.2321,
+  "pivotY": 0.4722
+ },
+ "butterfly_knife": {
+  "name": "Butterfly Knife",
+  "w": 22,
+  "h": 10,
+  "pivotX": 0.25,
+  "pivotY": 0.45
+ },
+ "whirl_chain_blade": {
+  "name": "Whirl Chain Blade",
+  "w": 52,
+  "h": 16,
+  "pivotX": 0.1058,
+  "pivotY": 0.5312
+ },
+ "headsman_chainsaw_sword": {
+  "name": "Headsman Chainsaw Sword",
+  "w": 58,
+  "h": 16,
+  "pivotX": 0.1121,
+  "pivotY": 0.5312
+ },
+ "brass_knuckles": {
+  "name": "Brass Knuckles",
+  "w": 24,
+  "h": 15,
+  "pivotX": 0.4375,
+  "pivotY": 0.3667
+ },
+ "stun_baton": {
+  "name": "Stun Baton",
+  "w": 36,
+  "h": 11,
+  "pivotX": 0.1528,
+  "pivotY": 0.5
+ },
+ "road_sign": {
+  "name": "Road Sign",
+  "w": 44,
+  "h": 24,
+  "pivotX": 0.1023,
+  "pivotY": 0.4792
+ },
+ "ice_pick": {
+  "name": "Ice Pick",
+  "w": 26,
+  "h": 10,
+  "pivotX": 0.1731,
+  "pivotY": 0.45
+ },
+ "bayonet": {
+  "name": "Bayonet",
+  "w": 30,
+  "h": 11,
+  "pivotX": 0.1833,
+  "pivotY": 0.5
+ },
+ "rebar_spear": {
+  "name": "Rebar Spear",
+  "w": 64,
+  "h": 10,
+  "pivotX": 0.2109,
+  "pivotY": 0.45
+ },
+ "fang_twin_daggers": {
+  "name": "Fang Twin Daggers",
+  "w": 24,
+  "h": 16,
+  "pivotX": 0.1875,
+  "pivotY": 0.4688
+ },
+ "piercer_mag_lance": {
+  "name": "Piercer Mag-Lance",
+  "w": 66,
+  "h": 14,
+  "pivotX": 0.1742,
+  "pivotY": 0.4643
+ },
+ "firework_grenade_launcher": {
+  "name": "Firework Grenade Launcher",
+  "w": 46,
+  "h": 20,
+  "pivotX": 0.2717,
+  "pivotY": 0.175
+ },
+ "swarm_micro_missiles": {
+  "name": "Swarm Micro-Missiles",
+  "w": 44,
+  "h": 20,
+  "pivotX": 0.3977,
+  "pivotY": 0.125
+ },
+ "iron_star_shuriken": {
+  "name": "Iron Star Shuriken",
+  "w": 15,
+  "h": 15,
+  "pivotX": 0.5,
+  "pivotY": 0.5
+ },
+ "willow_throwing_knives": {
+  "name": "Willow Throwing Knives",
+  "w": 20,
+  "h": 14,
+  "pivotX": 0.225,
+  "pivotY": 0.4643
+ },
+ "caltrops": {
+  "name": "Caltrops",
+  "w": 24,
+  "h": 14,
+  "pivotX": 0.5208,
+  "pivotY": 0.3929
+ },
+ "armorbreak_javelin": {
+  "name": "Armorbreak Javelin",
+  "w": 62,
+  "h": 9,
+  "pivotX": 0.379,
+  "pivotY": 0.5
+ },
+ "moon_chakram": {
+  "name": "Moon Chakram",
+  "w": 19,
+  "h": 19,
+  "pivotX": 0.5,
+  "pivotY": 0.5
+ },
+ "senbon_needles": {
+  "name": "Senbon Needles",
+  "w": 22,
+  "h": 14,
+  "pivotX": 0.3864,
+  "pivotY": 0.4643
+ },
+ "mag_nailgun": {
+  "name": "Mag Nailgun",
+  "w": 32,
+  "h": 18,
+  "pivotX": 0.2969,
+  "pivotY": 0.1944
+ },
+ "furnace_flamethrower": {
+  "name": "Furnace Flamethrower",
+  "w": 46,
+  "h": 22,
+  "pivotX": 0.4674,
+  "pivotY": 0.2955
+ },
+ "tether_arc_cannon": {
+  "name": "Tether Arc Cannon",
+  "w": 52,
+  "h": 22,
+  "pivotX": 0.3173,
+  "pivotY": 0.1591
+ }
+}

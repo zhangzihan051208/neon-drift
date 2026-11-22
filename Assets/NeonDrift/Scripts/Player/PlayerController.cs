@@ -360,7 +360,7 @@ namespace NeonDrift
             energy = Mathf.Max(0f, energy - energyCost);
             if (!w.thrown) SetAmmo(w, Ammo(w) - 1);
             lastShotTime = Time.time;
-            Vector2 muzzle = (Vector2)gun.position + AimDir * 0.8f;      // 画出来的枪口离身体约 1.25 个单位
+            Vector2 muzzle = Muzzle();
             float ang = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
             // 增益改写的弹道参数
             int pellets = w.pellets + (w.category == "霰弹枪" ? 3 * N("slugs") : 0);
@@ -533,6 +533,7 @@ namespace NeonDrift
             iaiReady = Time.time - lastMeleeTime > 1.5f;              // 「拔刀术」：歇了 1.5 秒后的第一刀
             lastMeleeTime = Time.time;
             Sfx.Play(w.melee == 3 ? "thrust" : w.melee == 2 ? "heavy_swing" : "swing", 0.9f);
+            meleeVisW = w; meleeVisT = MeleeVisTime; meleeVisFlip = AimDir.x < 0f;
             float meleeBurn = BurnDps(w) + 1.2f * N("e_blade") * dmgMul;
             if (w.melee == 3)
             {
@@ -690,9 +691,63 @@ namespace NeonDrift
             gsr.flipY = AimDir.x < 0f;
 
             visual?.SetAim(AimDir);
+            if (visual != null) visual.Pose = ZeroVisual.PoseOf(meleeVisT > 0f ? meleeVisW : Weapon, meleeVisT > 0f);
             visual?.Tick(Facing, move.sqrMagnitude > 0.01f, sprintHeld && move.sqrMagnitude > 0.01f,
                 IsDashing, dashDir, dashT, dashTime, shotVisual);
             shotVisual = false;
+            UpdateHeldWeapon();
+        }
+
+        // ---------------------------------------------------------------- 手上的武器（单独一层，跟着瞄准转）
+        const float MeleeVisTime = 0.22f;
+        const float HandHeight = 1.55f, HandReach = 0.30f;           // 握持点：腰胸之间，离身体中线 0.3 个单位
+        WeaponDef meleeVisW; float meleeVisT; bool meleeVisFlip;
+        Sprite fallbackGun;
+        float muzzleDist = 0.8f;
+
+        /// <summary>枪口位置：用人物图里画死的那把手枪时在伸直的手臂末端，否则在手上那把武器图的最前端。</summary>
+        Vector2 Muzzle()
+        {
+            if (visual != null && visual.BakedPistol)
+                return (Vector2)transform.position + new Vector2(0f, 2.15f) + AimDir * 1.25f;
+            return (Vector2)transform.position + new Vector2(0f, HandHeight) + AimDir * (HandReach + muzzleDist);
+        }
+
+        void UpdateHeldWeapon()
+        {
+            if (gunSr == null) return;
+            if (fallbackGun == null) fallbackGun = gunSr.sprite;
+            if (meleeVisT > 0f) meleeVisT -= Time.deltaTime;
+            bool meleeing = meleeVisT > 0f && meleeVisW != null;
+            var w = meleeing ? meleeVisW : Weapon;
+            var art = WeaponArt.GetSprite(w);
+            bool show = art != null && !IsDashing && !IsDead
+                     && (meleeing || visual == null || visual.LayerVisible)
+                     && !(w != null && w.thrown && Ammo(w) <= 0);
+            if (art == null && (visual == null || !visual.Ready)) { gunSr.sprite = fallbackGun; return; }   // 没有动作图也没有武器图：老的灰色方块
+            if (!show) { gun.localScale = Vector3.zero; return; }
+            gunSr.sprite = art;
+            gunSr.color = Color.white;
+            float k = WeaponArt.PPU / 56f;                               // 和人物同一像素密度
+            muzzleDist = (art.rect.width - art.pivot.x) / WeaponArt.PPU * k;
+            float aimAng = Mathf.Atan2(AimDir.y, AimDir.x) * Mathf.Rad2Deg;
+            float ang = aimAng, reach = HandReach - recoil;
+            if (meleeing)
+            {
+                float u = 1f - meleeVisT / MeleeVisTime, e = 1f - (1f - u) * (1f - u);          // 先快后慢
+                float side = meleeVisFlip ? -1f : 1f;
+                switch (meleeVisW.melee)
+                {
+                    case 3: reach = HandReach - 0.15f + Mathf.Sin(u * Mathf.PI) * 0.75f; break;    // 突刺：往前捅出去再收回
+                    case 2: ang = aimAng + side * Mathf.Lerp(120f, -45f, e); break;                // 钝器：从头顶砸下来
+                    default: ang = aimAng + side * Mathf.Lerp(85f, -85f, e); break;                // 挥砍：从上往下划一道弧
+                }
+            }
+            gun.localRotation = Quaternion.Euler(0, 0, ang);
+            gun.localPosition = new Vector2(0f, HandHeight) + (Vector2)(Quaternion.Euler(0, 0, ang) * Vector3.right) * reach;
+            gun.localScale = new Vector3(k, k, 1f);
+            gunSr.flipY = Mathf.Cos(ang * Mathf.Deg2Rad) < 0f;          // 往左时上下翻过来，握把一直朝下
+            gunSr.sortingOrder = Facing == Dir.Up ? -2 : 2;              // 朝上时画在身体后面
         }
 
         // ---------------------------------------------------------------- 武器槽、电量、补给

@@ -107,6 +107,7 @@ namespace NeonDrift
                 if (on && p.Reloading) Fill(new Rect(r.x, r.yMax - 3 * s, r.width * p.ReloadProgress, 3 * s), Sprites.Hex("d8a040"));
                 var st = new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = on ? Color.white : new Color(0.6f, 0.6f, 0.6f) } };
                 Lbl(new Rect(r.x + 6 * s, r.y, r.width - 8 * s, r.height), txt, st);
+                if (w != null) { var gc = GUI.color; GUI.color = on ? Color.white : new Color(1f, 1f, 1f, 0.55f); WeaponArt.DrawGUI(w, new Rect(r.x + 2 * s, r.y - 24 * s, r.width, 21 * s)); GUI.color = gc; }   // 武器图画在槽的上面
             }
             // 近战位
             if (p.MeleeWeapon != null)
@@ -118,6 +119,7 @@ namespace NeonDrift
                 if (mw.signature) Fill(new Rect(mr.x, mr.yMax - 1 * s, mr.width, 1 * s), Weapons.SignatureCol);
                 Lbl(new Rect(mr.x + 6 * s, mr.y, mr.width - 8 * s, mr.height), $"{mw.name}\nRMB · {Weapons.Tag(mw)} · {Weapons.ReachName(mw.reach)} · Wt {mw.weight}",
                           new GUIStyle(small) { alignment = TextAnchor.MiddleLeft, normal = { textColor = Color.white } });
+                WeaponArt.DrawGUI(mw, new Rect(mr.x + 2 * s, mr.y - 24 * s, mr.width, 21 * s));
             }
             Lbl(new Rect(x + 450 * s, Screen.height - 50 * s, 200 * s, 40 * s), "Q swap · R reload\nG drop gun · X drop melee", new GUIStyle(small) { alignment = TextAnchor.MiddleLeft });
             // 负重：三个武器加起来的重量
