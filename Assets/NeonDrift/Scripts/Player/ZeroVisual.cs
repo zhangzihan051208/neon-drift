@@ -271,14 +271,6 @@ namespace NeonDrift
                 sprite = anims[slashKey][slashFrame];
                 if (i == SlashSeq.Length - 1 && t >= SlashDur[i]) slashT = -1f;   // 播完回到平常的动作
             }
-            if (slashFx != null)
-            {
-                bool on = Slashing && anims.TryGetValue(slashFxKey, out var fxa) && slashFrame < fxa.Length;
-                slashFx.sprite = on ? anims[slashFxKey][slashFrame] : null;
-                slashFx.color = slashTint;
-                slashFx.sortingLayerID = body.sortingLayerID;
-                slashFx.sortingOrder = body.sortingOrder + 3;
-            }
             else if (gunPhase != GunPhase.Off && !poseShoot && !bakedOk)
             {
                 AdvanceGun();                                                  // 这把武器没有开枪图：身体照常走/站，手上那层武器自己瞄准
@@ -307,6 +299,16 @@ namespace NeonDrift
             else if (mode == 2) sprite = Frame("run", dir, Mathf.FloorToInt(locoTime * 13f));
             else if (mode == 1) sprite = Frame("walk", dir, Mathf.FloorToInt(locoTime * 10f));
             else sprite = Frame("idle", dir, Mathf.FloorToInt(locoTime * 4f));
+
+            // 刀光层：挥砍时跟着人物同一帧显示，其余时候清空
+            if (slashFx != null)
+            {
+                bool on = Slashing && anims.TryGetValue(slashFxKey, out var fxa) && slashFrame < fxa.Length;
+                slashFx.sprite = on ? anims[slashFxKey][slashFrame] : null;
+                slashFx.color = slashTint;
+                slashFx.sortingLayerID = body.sortingLayerID;
+                slashFx.sortingOrder = body.sortingOrder + 3;
+            }
 
             body.sprite = sprite;
             body.flipX = flip;
