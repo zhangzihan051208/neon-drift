@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -517,6 +518,53 @@ namespace NeonDrift
 
         bool swingFlip;
 
+        [Header("挥砍时手上武器的大小")]
+        [Tooltip("所有近战武器挥砍时的整体倍数（1 = 按下面表里的长度）")]
+        public float SlashWeaponScale = 1f;
+
+        /// <summary>
+        /// 挥砍时每把近战武器在人物手上画多长（像素，人物约 148 像素高 ≈ 1.7 米，按真实大小略收一点）。
+        /// 大家伙就该大：武士刀、链锯剑、动力锤、路牌比人的半身还长；蝴蝶刀、指虎只有一拳大。表里没有的用原图大小。
+        /// </summary>
+        static readonly Dictionary<string, float> HeldLength = new Dictionary<string, float>
+        {
+            { "Nameless", 68f }, { "Daybreak Thermal Katana", 68f }, { "Headsman Chainsaw Sword", 88f }, { "Whirl Chain Blade", 60f },
+            { "Pipe Machete", 44f }, { "Mantis Arm Blades", 42f }, { "Monomolecular Wire", 40f }, { "Butterfly Knife", 20f },
+            { "Ironbreak Power Hammer", 76f }, { "Road Sign", 80f }, { "Crowbar", 54f }, { "Stun Baton", 38f },
+            { "Demolisher Hydraulic Fists", 30f }, { "Brass Knuckles", 14f },
+        };
+        /// <summary>这把武器挥砍时画多长（像素），用来挑对应大小的刀光。</summary>
+        float SlashReach(WeaponDef w)
+        {
+            var h = WeaponArt.GetHeldSprite(w);
+            if (h != null) return (h.rect.width - 2f) * SlashWeaponScale;          // 手持版图本身就是按真实比例画的
+            var art = WeaponArt.GetSprite(w); return art == null ? 18f : HeldPx(w, art);
+        }
+        float HeldPx(WeaponDef w, Sprite art) => (w != null && HeldLength.TryGetValue(w.name, out var L) ? L : art.rect.width) * SlashWeaponScale;
+
+        /// <summary>
+        /// 刀光颜色：整体克制。普通的刀、钝器、长柄都是冷白，只带一丝自己金属/漆面的色温；
+        /// 只有本身带能量或特殊刃口的几把（表里）才有颜色，而且压暗、去饱和，不花哨。
+        /// </summary>
+        static readonly Dictionary<string, string> TrailHex = new Dictionary<string, string>
+        {
+            { "Nameless", "b04848" },               // 无铭：暗红刃口
+            { "Daybreak Thermal Katana", "c8784a" }, // 热能刀：余烬橙
+            { "Mantis Arm Blades", "a8649a" },      // 螳螂臂刃：暗品红
+            { "Monomolecular Wire", "a490b8" },     // 单分子线：灰紫
+            { "Stun Baton", "c8c08a" },             // 电棍：淡电黄
+            { "Fang Twin Daggers", "9cb060" },      // 獠牙双匕：暗绿
+            { "Piercer Mag-Lance", "a47ab0" },      // 磁轨枪矛：灰紫红
+        };
+        static readonly Color ColdTrail = new Color(0.80f, 0.86f, 1f);     // 冷白（大多数武器）
+        static Color SlashTint(WeaponDef w)
+        {
+            if (w == null) return ColdTrail;
+            if (TrailHex.TryGetValue(w.name, out var hex) && ColorUtility.TryParseHtmlString("#" + hex, out var c))
+                return Color.Lerp(ColdTrail, c, 0.7f);
+            return Color.Lerp(ColdTrail, w.color, 0.12f);                     // 其余：冷白里带一丝自己的色温
+        }
+
         /// <summary>
         /// 近战。刀：身前一道扇形刀光，扇形里的敌人受伤，敌人的子弹被劈碎；来回两刀方向相反。
         /// 钝器：往前砸地，落点一圈冲击波，圈里的敌人受重击并被击退，震屏 + 顿帧。
@@ -531,6 +579,7 @@ namespace NeonDrift
             float range = w.range * Cat("tiblade", "刀", 1.3f, w) * Cat("pierce", "长柄", 1.25f, w);
             float meleeDmg = DamageOf(w) * Pow(1.3f, "e_blade");
             iaiReady = Time.time - lastMeleeTime > 1.5f;              // 「拔刀术」：歇了 1.5 秒后的第一刀
+            if (Time.time - lastMeleeTime > 0.8f) swingFlip = true;  // 停手 0.8 秒后重新从竖劈起手
             lastMeleeTime = Time.time;
             Sfx.Play(w.melee == 3 ? "thrust" : w.melee == 2 ? "heavy_swing" : "swing", 0.9f);
             meleeVisW = w; meleeVisT = MeleeVisTime; meleeVisFlip = AimDir.x < 0f;
@@ -541,7 +590,9 @@ namespace NeonDrift
                 swingFlip = !swingFlip;
                 int lpx = Mathf.RoundToInt(range * Sprites.PPU);
                 Vector2 start = chest + AimDir * 0.25f + (w.fx == "twin" ? Vector2.Perpendicular(AimDir) * (swingFlip ? 0.1f : -0.1f) : Vector2.zero);
-                PixelFx.Play(PixelFx.Thrust(lpx, w.fx == "twin", w.fx == "lance"), start, ang, w.color, w.fx == "twin" ? 34f : 26f, 6000, false, transform);
+                // 和刀一样：人物播竖劈 / 横劈（武器拿在手上、带刀光）；没有动作图时用原来的突刺光
+                bool bodySlash = visual != null && visual.PlaySlash(swingFlip, AimDir, SlashTint(w), SlashReach(w));
+                if (!bodySlash) PixelFx.Play(PixelFx.Thrust(lpx, w.fx == "twin", w.fx == "lance"), start, ang, w.color, w.fx == "twin" ? 34f : 26f, 6000, false, transform);
                 if (w.fx == "lance") PixelFx.Play(PixelFx.Zap(6), chest + AimDir * range, 0f, w.color, 24f);
                 rb.linearVelocity += AimDir * 5f;
                 foreach (var e in Enemy.All.ToArray())
@@ -572,7 +623,9 @@ namespace NeonDrift
             {
                 swingFlip = !swingFlip;
                 int rpx = Mathf.RoundToInt(range * Sprites.PPU * 0.85f);
-                SlashFx(w, chest, ang, rpx);
+                // 人物播挥砍动作：竖劈、横劈轮流（刀和冷色刀光都画在人物图上）；没有动作图时用原来的程序刀光
+                bool bodySlash = visual != null && visual.PlaySlash(swingFlip, AimDir, SlashTint(w), SlashReach(w));
+                if (!bodySlash) SlashFx(w, chest, ang, rpx);
                 foreach (var e in Enemy.All.ToArray())
                 {
                     if (e == null || e.Allied) continue;
@@ -599,6 +652,8 @@ namespace NeonDrift
             }
             else
             {
+                swingFlip = !swingFlip;
+                visual?.PlaySlash(swingFlip, AimDir, SlashTint(w), SlashReach(w));  // 钝器：和刀一样竖劈、横劈轮流，落点照样砸出冲击波
                 Vector2 at = (Vector2)transform.position + AimDir * range * 0.75f + Vector2.up * 0.1f;
                 int rpx = Mathf.RoundToInt(range * Sprites.PPU * 0.9f);
                 SmashFx(w, at, ang, rpx);
@@ -691,6 +746,7 @@ namespace NeonDrift
             gsr.flipY = AimDir.x < 0f;
 
             visual?.SetAim(AimDir);
+            visual?.SetMove(move);
             if (visual != null) visual.Pose = ZeroVisual.PoseOf(meleeVisT > 0f ? meleeVisW : Weapon, meleeVisT > 0f);
             visual?.Tick(Facing, move.sqrMagnitude > 0.01f, sprintHeld && move.sqrMagnitude > 0.01f,
                 IsDashing, dashDir, dashT, dashTime, shotVisual);
@@ -718,7 +774,7 @@ namespace NeonDrift
             if (gunSr == null) return;
             if (fallbackGun == null) fallbackGun = gunSr.sprite;
             if (meleeVisT > 0f) meleeVisT -= Time.deltaTime;
-            bool meleeing = meleeVisT > 0f && meleeVisW != null;
+            bool meleeing = (meleeVisT > 0f || (visual != null && visual.Slashing)) && meleeVisW != null;   // 挥砍动作播完之前一直拿着近战武器
             var w = meleeing ? meleeVisW : Weapon;
             var art = WeaponArt.GetSprite(w);
             bool show = art != null && !IsDashing && !IsDead
@@ -742,6 +798,20 @@ namespace NeonDrift
                     case 2: ang = aimAng + side * Mathf.Lerp(120f, -45f, e); break;                // 钝器：从头顶砸下来
                     default: ang = aimAng + side * Mathf.Lerp(85f, -85f, e); break;                // 挥砍：从上往下划一道弧
                 }
+            }
+            if (visual != null && visual.SlashHand(out var handPos, out float handAng, out bool behind))
+            {
+                // 挥砍动作里：武器握在人物图里那只手上，跟着每一帧手的位置和角度走
+                gun.position = handPos;
+                gun.rotation = Quaternion.Euler(0, 0, handAng);
+                var heldArt = WeaponArt.GetHeldSprite(w);                   // 有手持版就用手持版（细节更多、和人物同一像素密度）
+                float ws;
+                if (heldArt != null) { gunSr.sprite = heldArt; ws = SlashWeaponScale / k; }
+                else ws = HeldPx(w, art) / art.rect.width;                  // 没有的话把普通武器图按真实大小缩放
+                gun.localScale = new Vector3(k * ws, k * ws, 1f);
+                gunSr.flipY = Mathf.Cos(handAng * Mathf.Deg2Rad) < 0f;
+                gunSr.sortingOrder = behind ? -2 : 2;
+                return;
             }
             gun.localRotation = Quaternion.Euler(0, 0, ang);
             gun.localPosition = new Vector2(0f, HandHeight) + (Vector2)(Quaternion.Euler(0, 0, ang) * Vector3.right) * reach;

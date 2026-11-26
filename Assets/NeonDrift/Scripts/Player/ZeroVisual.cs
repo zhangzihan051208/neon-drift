@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace NeonDrift
@@ -92,6 +93,81 @@ namespace NeonDrift
         /// <summary>告诉外观现在瞄的方向（正面开枪时决定往左下还是右下）。</summary>
         public void SetAim(Vector2 a) { if (a.sqrMagnitude > 0.0001f) aim = a; }
 
+        Vector2 moveDir;
+
+        // ---------------------------------------------------------------- 近战挥砍（竖劈 melee_v / 横劈 melee_h，刀和刀光画在人物图上）
+        // 每套 8 帧：0 站姿、1–2 蓄力、3 出刀、4 劈到底、5–6 收刀、7 站姿。游戏里伤害是按下就结算的，所以从蓄力的最后一帧开始快放。
+        static readonly int[] SlashSeq = { 2, 3, 4, 5, 6, 7 };
+        static readonly float[] SlashDur = { 0.04f, 0.04f, 0.06f, 0.07f, 0.07f, 0.08f };
+        float slashT = -1f;
+        string slashKey, slashFxKey;
+        int slashFrame;
+        Color slashTint = Color.white;
+        SpriteRenderer slashFx;
+        /// <summary>每帧手的位置和武器朝向（melee_grips.json）：格子里的像素坐标 x, y（从左上数）、角度（度，逆时针）、是否画在身后。</summary>
+        readonly Dictionary<string, float[][]> grips = new Dictionary<string, float[][]>();
+        /// <summary>正在播挥砍动作（这时手上那层武器图不画，刀已经画在人物图上）。</summary>
+        public bool Slashing => slashT >= 0f;
+
+        /// <summary>
+        /// 播一刀挥砍：horizontal 为横劈，否则竖劈，方向取最近的八方向。人物图里手是空的，
+        /// 武器由 PlayerController 按 SlashHand 给的位置画在手上；刀光是单独一层（melee_vfx / melee_hfx），按 tint 上色。没有这套图时返回 false。
+        /// </summary>
+        public bool PlaySlash(bool horizontal, Vector2 dir, Color tint, float weaponPx = 18f)
+        {
+            if (!Ready || dying || dir.sqrMagnitude < 0.0001f) return false;
+            string d8 = Key8(dir);
+            string key = (horizontal ? "melee_h_" : "melee_v_") + d8;
+            if (!anims.ContainsKey(key)) return false;
+            slashKey = key;
+            // 刀光按武器长度分四档：短刀（≤25 像素）、中（≤50）、长（≤72）、特长，刀尖都落在刀光末端
+            string size = weaponPx <= 25f ? "" : weaponPx <= 50f ? "m" : weaponPx <= 72f ? "l" : "xl";
+            slashFxKey = (horizontal ? "melee_hfx" : "melee_vfx") + size + "_" + d8;
+            if (!anims.ContainsKey(slashFxKey)) slashFxKey = (horizontal ? "melee_hfx_" : "melee_vfx_") + d8;
+            slashTint = tint;
+            slashFrame = SlashSeq[0];
+            slashT = 0f;
+            gunPhase = GunPhase.Off;
+            hitting = false;
+            lastLook = dir;
+            return true;
+        }
+
+        /// <summary>挥砍中这一帧手的世界坐标、武器角度（度）和要不要画在身后。不在挥砍时返回 false。</summary>
+        public bool SlashHand(out Vector3 pos, out float angle, out bool behind)
+        {
+            pos = Vector3.zero; angle = 0f; behind = false;
+            if (!Slashing || !grips.TryGetValue(slashKey.Substring(6), out var g) || slashFrame >= g.Length) return false;
+            var r = g[slashFrame];
+            const float PivotFromTop = 216f - 28f;                            // melee_ 格子 240×216，脚底（pivot）离下边 28 行
+            var local = new Vector3((r[0] + 0.5f - CellW * 0.5f) / PPU, (PivotFromTop - (r[1] + 0.5f)) / PPU, 0f);
+            pos = body.transform.TransformPoint(local);
+            angle = r[2];
+            behind = r[3] > 0.5f;
+            return true;
+        }
+
+        void LoadGrips(string dir)
+        {
+            string p = Path.Combine(dir, "melee_grips.json");
+            if (!File.Exists(p)) return;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            foreach (Match m in Regex.Matches(File.ReadAllText(p), "\"([a-z]+_[a-z]+)\":\\[(.*?)\\]\\]"))
+            {
+                var rows = new List<float[]>();
+                foreach (Match r in Regex.Matches(m.Groups[2].Value + "]", "\\[([^\\[\\]]+)\\]"))
+                {
+                    var parts = r.Groups[1].Value.Split(',');
+                    var v = new float[parts.Length];
+                    for (int i = 0; i < parts.Length; i++) v[i] = float.Parse(parts[i], inv);
+                    rows.Add(v);
+                }
+                grips[m.Groups[1].Value] = rows.ToArray();
+            }
+        }
+        /// <summary>告诉外观现在按的移动方向（八方向走路用）。</summary>
+        public void SetMove(Vector2 m) { moveDir = m; }
+
         bool dying;
         float deathTime;
         string deathDir = "s";
@@ -157,8 +233,10 @@ namespace NeonDrift
             // 八方向：开枪/瞄准时跟着瞄准方向，走动时跟着移动方向，站着不动时跟着朝向
             // 站着不动时保持最后一次的八方向（走到斜方向停下就面朝斜方向站着）
             Vector2 vel = rb != null ? rb.linearVelocity : Vector2.zero;
+            // 走动时用按键方向（WASD 斜着按就是斜方向；不用速度，因为上下速度被压扁过，斜着走会被算成左右）
             if (gunPhase != GunPhase.Off) lastLook = aim;
-            else if (moving && vel.sqrMagnitude > 0.5f) lastLook = vel;
+            else if (moving && moveDir.sqrMagnitude > 0.01f) lastLook = moveDir;
+            else if (!moving) lastLook = aim;                                   // 站着不动时和四方向朝向一样跟着瞄准方向
             if (Key4(lastLook) != dir) lastLook = dir == "e" ? Vector2.right : dir == "w" ? Vector2.left : dir == "n" ? Vector2.up : Vector2.down;   // 和四方向朝向对不上时以朝向为准
             dir8 = Key8(lastLook);
             // 有这套姿势的开枪图（手是空的）就用它，武器图一直显示；没有的话手枪用画死的那把，其他武器不播开枪图
@@ -166,6 +244,7 @@ namespace NeonDrift
             bool bakedOk = Pose == "pistol" && !poseShoot && Has("shoot", dir);
             BakedPistol = bakedOk;
             LayerVisible = !(bakedOk && gunPhase != GunPhase.Off);
+            if (dashing) slashT = -1f;                                         // 闪移打断挥砍
 
             if (dashing) { gunPhase = GunPhase.Off; hitting = false; }
             else if (fired) NoteFire();
@@ -182,6 +261,23 @@ namespace NeonDrift
                 float u = 1f - Mathf.Clamp01(dashT / Mathf.Max(0.0001f, dashTime));
                 int f = u < 0.15f ? 0 : u < 0.5f ? 1 : u < 0.85f ? 2 : 3;
                 sprite = Frame("dash", dd, f);
+            }
+            else if (Slashing)
+            {
+                slashT += Time.deltaTime;
+                float t = slashT; int i = 0;
+                while (i < SlashSeq.Length - 1 && t >= SlashDur[i]) { t -= SlashDur[i]; i++; }
+                slashFrame = SlashSeq[i];
+                sprite = anims[slashKey][slashFrame];
+                if (i == SlashSeq.Length - 1 && t >= SlashDur[i]) slashT = -1f;   // 播完回到平常的动作
+            }
+            if (slashFx != null)
+            {
+                bool on = Slashing && anims.TryGetValue(slashFxKey, out var fxa) && slashFrame < fxa.Length;
+                slashFx.sprite = on ? anims[slashFxKey][slashFrame] : null;
+                slashFx.color = slashTint;
+                slashFx.sortingLayerID = body.sortingLayerID;
+                slashFx.sortingOrder = body.sortingOrder + 3;
             }
             else if (gunPhase != GunPhase.Off && !poseShoot && !bakedOk)
             {
@@ -270,6 +366,13 @@ namespace NeonDrift
             }
         }
 
+        /// <summary>近战挥砍图（melee_）上边多留了 12 行给举过头顶的刀和刀光，其余图多出来的行都在下边。</summary>
+        static int TopExtra(string name) => name.StartsWith("melee_") ? 12 : 0;
+        /// <summary>刀光层（melee_vfx… / melee_hfx…）：格子 480×432，长武器的大刀光也放得下；脚底在离下边 124 行。</summary>
+        static bool IsSlashFx(string name) => name.StartsWith("melee_vfx") || name.StartsWith("melee_hfx");
+        const int FxCellW = 480;
+        const float FxPivotFromBottom = 124f;
+
         bool TryLoad(SpriteRenderer bodyRenderer, SpriteRenderer gunRenderer)
         {
             body = bodyRenderer;
@@ -290,11 +393,15 @@ namespace NeonDrift
                     continue;
                 }
                 keep.Add(tex);
-                int n = tex.width / CellW;
+                bool fx = IsSlashFx(name);
+                int cw = fx ? FxCellW : CellW;
+                int n = tex.width / cw;
                 var frames = new Sprite[n];
                 for (int i = 0; i < n; i++)
                 {
-                    frames[i] = Sprite.Create(tex, new Rect(i * CellW, 0, CellW, tex.height), new Vector2(0.5f, (Foot + tex.height - CellH) / (float)tex.height), PPU, 0, SpriteMeshType.FullRect);
+                    var pivot = fx ? new Vector2(0.5f, FxPivotFromBottom / (float)tex.height)
+                                   : new Vector2(0.5f, (Foot + tex.height - CellH - TopExtra(name)) / (float)tex.height);
+                    frames[i] = Sprite.Create(tex, new Rect(i * cw, 0, cw, tex.height), pivot, PPU, 0, SpriteMeshType.FullRect);
                     frames[i].name = name + i;
                     keep.Add(frames[i]);
                 }
@@ -307,6 +414,10 @@ namespace NeonDrift
             var coat = Shader.Find("NeonDrift/ZeroCoat");
             if (coat != null) { body.sharedMaterial = new Material(coat) { name = "ZeroCoat" }; mpb = new MaterialPropertyBlock(); }
             else Debug.LogWarning("找不到 NeonDrift/ZeroCoat 着色器，风衣不会飘");
+            LoadGrips(dir);
+            var fxGo = new GameObject("SlashFx");
+            fxGo.transform.SetParent(body.transform, false);
+            slashFx = fxGo.AddComponent<SpriteRenderer>();
             Ready = true;
             return true;
         }

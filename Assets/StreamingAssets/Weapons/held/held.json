@@ -1,0 +1,135 @@
+{
+ "nameless": {
+  "name": "Nameless",
+  "w": 70,
+  "h": 13,
+  "pivotX": 0.15,
+  "pivotY": 0.4231
+ },
+ "daybreak_thermal_katana": {
+  "name": "Daybreak Thermal Katana",
+  "w": 70,
+  "h": 14,
+  "pivotX": 0.15,
+  "pivotY": 0.3929
+ },
+ "pipe_machete": {
+  "name": "Pipe Machete",
+  "w": 46,
+  "h": 16,
+  "pivotX": 0.1848,
+  "pivotY": 0.4688
+ },
+ "mantis_arm_blades": {
+  "name": "Mantis Arm Blades",
+  "w": 44,
+  "h": 20,
+  "pivotX": 0.1705,
+  "pivotY": 0.475
+ },
+ "monomolecular_wire": {
+  "name": "Monomolecular Wire",
+  "w": 42,
+  "h": 18,
+  "pivotX": 0.1548,
+  "pivotY": 0.4722
+ },
+ "butterfly_knife": {
+  "name": "Butterfly Knife",
+  "w": 22,
+  "h": 10,
+  "pivotX": 0.25,
+  "pivotY": 0.45
+ },
+ "whirl_chain_blade": {
+  "name": "Whirl Chain Blade",
+  "w": 62,
+  "h": 16,
+  "pivotX": 0.1371,
+  "pivotY": 0.4688
+ },
+ "headsman_chainsaw_sword": {
+  "name": "Headsman Chainsaw Sword",
+  "w": 90,
+  "h": 24,
+  "pivotX": 0.1167,
+  "pivotY": 0.4792
+ },
+ "crowbar": {
+  "name": "Crowbar",
+  "w": 56,
+  "h": 19,
+  "pivotX": 0.2589,
+  "pivotY": 0.4474
+ },
+ "ironbreak_power_hammer": {
+  "name": "Ironbreak Power Hammer",
+  "w": 78,
+  "h": 28,
+  "pivotX": 0.1346,
+  "pivotY": 0.4821
+ },
+ "road_sign": {
+  "name": "Road Sign",
+  "w": 82,
+  "h": 38,
+  "pivotX": 0.0915,
+  "pivotY": 0.5132
+ },
+ "stun_baton": {
+  "name": "Stun Baton",
+  "w": 40,
+  "h": 12,
+  "pivotX": 0.1625,
+  "pivotY": 0.4583
+ },
+ "demolisher_hydraulic_fists": {
+  "name": "Demolisher Hydraulic Fists",
+  "w": 32,
+  "h": 24,
+  "pivotX": 0.2969,
+  "pivotY": 0.4792
+ },
+ "brass_knuckles": {
+  "name": "Brass Knuckles",
+  "w": 18,
+  "h": 13,
+  "pivotX": 0.4722,
+  "pivotY": 0.4231
+ },
+ "ice_pick": {
+  "name": "Ice Pick",
+  "w": 28,
+  "h": 11,
+  "pivotX": 0.2321,
+  "pivotY": 0.4091
+ },
+ "bayonet": {
+  "name": "Bayonet",
+  "w": 36,
+  "h": 13,
+  "pivotX": 0.1806,
+  "pivotY": 0.4231
+ },
+ "rebar_spear": {
+  "name": "Rebar Spear",
+  "w": 98,
+  "h": 14,
+  "pivotX": 0.1071,
+  "pivotY": 0.4643
+ },
+ "fang_twin_daggers": {
+  "name": "Fang Twin Daggers",
+  "w": 26,
+  "h": 12,
+  "pivotX": 0.25,
+  "pivotY": 0.4583
+ },
+ "piercer_mag_lance": {
+  "name": "Piercer Mag-Lance",
+  "w": 106,
+  "h": 18,
+  "pivotX": 0.1179,
+  "pivotY": 0.4722
+ }
+}
